@@ -24,7 +24,7 @@ describe("pass email", () => {
   });
   it("shows the pass type, plate, local expiry date and pass link", () => {
     expect(email.html).toContain("Staff");
-    expect(email.html).toContain("BT4521");
+    expect(email.html).toContain("BT 4521");
     expect(email.html).toContain("17 Oct 2027");
     expect(email.html).toContain('href="https://entry.example/pass"');
   });

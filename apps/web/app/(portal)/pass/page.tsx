@@ -63,7 +63,7 @@ export default async function PassPage({
       <div className="mt-6 grid gap-4">
         {emailed === "1" && active && (
           <Notice tone="success">
-            Your pass is ready. We&apos;ve emailed you a copy.
+            Saved. We&apos;ve emailed you a copy of your pass.
           </Notice>
         )}
         {emailed === "0" && active && (

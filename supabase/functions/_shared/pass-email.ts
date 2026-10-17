@@ -27,6 +27,12 @@ export function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+/** "BT4521" → "BT 4521", matching the pass page. */
+export function displayPlate(plate: string): string {
+  const match = /^([A-Z]+)(\d.*)$/.exec(plate);
+  return match ? `${match[1]} ${match[2]}` : plate;
+}
+
 /** "17 Oct 2027" in Africa/Blantyre, the site's time zone. */
 export function formatLocalDate(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -41,7 +47,7 @@ export function renderPassEmail(input: PassEmailInput) {
   const name = escapeHtml(input.fullName);
   const type = TYPE_LABEL[input.passType];
   const validUntil = formatLocalDate(input.validUntil);
-  const plate = input.plate ? escapeHtml(input.plate) : null;
+  const plate = input.plate ? escapeHtml(displayPlate(input.plate)) : null;
   const url = escapeHtml(input.passUrl);
 
   const subject = `Your OMIS Entry pass, ${input.fullName}`;
@@ -104,7 +110,7 @@ export function renderPassEmail(input: PassEmailInput) {
 
   const text = [
     `OMIS Entry — ${input.fullName}`,
-    `${type} pass${input.plate ? `, vehicle ${input.plate}` : ""}`,
+    `${type} pass${input.plate ? `, vehicle ${displayPlate(input.plate)}` : ""}`,
     `Valid until ${validUntil}`,
     "",
     "Show the QR code in this email to the guard at the gate.",
