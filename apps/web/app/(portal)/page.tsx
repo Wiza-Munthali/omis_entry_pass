@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, IdCard, UserPlus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/portal/brand";
 
@@ -19,17 +20,15 @@ export default function WelcomePage() {
           href="/staff"
           title="I work here"
           text="Get your staff pass"
-          icon={<IdCard />}
+          illustration="/illustrations/staff-pass.webp"
           tint="bg-brand-soft"
-          iconTone="bg-surface text-brand-strong"
         />
         <ChoiceCard
           href="/visit"
           title="I'm visiting"
           text="Request a visitor pass"
-          icon={<UserPlus />}
+          illustration="/illustrations/visitor-pass.webp"
           tint="bg-warning-soft"
-          iconTone="bg-surface text-warning"
         />
       </nav>
 
@@ -56,16 +55,14 @@ function ChoiceCard({
   href,
   title,
   text,
-  icon,
+  illustration,
   tint,
-  iconTone,
 }: {
   href: string;
   title: string;
   text: string;
-  icon: React.ReactNode;
+  illustration: string;
   tint: string;
-  iconTone: string;
 }) {
   return (
     <Link
@@ -74,21 +71,23 @@ function ChoiceCard({
     >
       <div
         className={cn(
-          "relative flex min-h-36 items-center gap-4 rounded-card p-5",
+          "relative flex min-h-36 items-center gap-2 rounded-card p-5",
           tint,
         )}
       >
-        <span
-          className={cn(
-            "inline-flex size-14 shrink-0 items-center justify-center rounded-full [&_svg]:size-7",
-            iconTone,
-          )}
-        >
-          {icon}
-        </span>
-        <span className="grid gap-1 pr-12">
+        {/* Decorative: the title says what the card is. The artwork has its own margin. */}
+        <Image
+          src={illustration}
+          alt=""
+          width={120}
+          height={120}
+          priority
+          className="-my-3 -ml-4 size-22 shrink-0 min-[360px]:-my-4 min-[360px]:size-30"
+        />
+        <span className="grid gap-1">
           <span className="text-title font-semibold text-ink">{title}</span>
-          <span className="text-body text-text-muted">{text}</span>
+          {/* Room for the arrow button in the bottom-right corner. */}
+          <span className="pr-12 text-body text-text-muted">{text}</span>
         </span>
         <span className="absolute right-4 bottom-4 inline-flex size-12 items-center justify-center rounded-full bg-ink text-brand transition-transform group-hover:translate-x-0.5">
           <ArrowRight className="size-5" aria-hidden />
