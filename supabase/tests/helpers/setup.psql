@@ -30,6 +30,8 @@ $$;
 create function tests.remember(p_key text, p_id uuid)
 returns uuid
 language sql
+security definer
+set search_path = ''
 as $$
   insert into tests.ids (key, id) values (p_key, p_id) returning id;
 $$;
