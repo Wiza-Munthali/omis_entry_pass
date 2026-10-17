@@ -3,7 +3,7 @@
 --   \ir helpers/setup.psql
 -- Everything here is rolled back with the test.
 --
---   tests.create_user(key, role)   auth user + profile (role via app_metadata), id stored under key
+--   tests.create_user(key, role)   auth user + profile (role via app_metadata, full_name = key), id stored under key
 --   tests.id(key)                  look up a fixture id
 --   tests.authenticate_as(key)     act as that user, the way PostgREST does (JWT claims + role)
 --   tests.authenticate_anon()      act as an anonymous API caller
@@ -34,7 +34,7 @@ as $$
   insert into tests.ids (key, id) values (p_key, p_id) returning id;
 $$;
 
-create function tests.create_user(p_key text, p_role text default 'staff', p_user_meta jsonb default '{}')
+create function tests.create_user(p_key text, p_role text default 'staff', p_user_meta jsonb default null)
 returns uuid
 language plpgsql
 as $$
@@ -46,7 +46,7 @@ begin
     '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
     p_key || '@test.invalid',
     jsonb_build_object('provider', 'email', 'role', p_role),
-    p_user_meta,
+    coalesce(p_user_meta, jsonb_build_object('full_name', p_key)),
     now(), now()
   );
   return tests.remember(p_key, uid);
