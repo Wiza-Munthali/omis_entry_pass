@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 const webRoot = join(__dirname, "..");
 const specPath = join(webRoot, "../../docs/SPEC.md");
 const globalsPath = join(webRoot, "app/globals.css");
+const tsTokensPath = join(webRoot, "lib/tokens.ts");
+const repoRoot = join(webRoot, "../..");
 
 /** Reads the Colors table in docs/SPEC.md → { token: "#rrggbb" }. */
 function specColors(): Record<string, string> {
@@ -27,6 +29,25 @@ function cssVariables(css: string): Record<string, string> {
     vars[m[1]] = m[2].toLowerCase();
   }
   return vars;
+}
+
+/** camelCase TS key → spec token name: brandStrong → brand-strong, surface2 → surface-2. */
+function specName(key: string): string {
+  return key
+    .replace(/([A-Z])/g, "-$1")
+    .replace(/(\d)/g, "-$1")
+    .toLowerCase();
+}
+
+/** `key: "#RRGGBB"` pairs from a TS token module. */
+function tsTokens(path: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of readFileSync(path, "utf8").matchAll(
+    /(\w+):\s*"(#[0-9A-Fa-f]{6})"/g,
+  )) {
+    out[specName(m[1])] = m[2].toLowerCase();
+  }
+  return out;
 }
 
 function sourceFiles(dir: string): string[] {
@@ -70,9 +91,46 @@ describe("design tokens", () => {
   it("no other source file uses a literal colour", () => {
     const literal = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(/;
     const offenders = sourceFiles(webRoot)
-      .filter((path) => path !== globalsPath)
+      .filter((path) => path !== globalsPath && path !== tsTokensPath)
       .filter((path) => literal.test(readFileSync(path, "utf8")))
       .map((path) => relative(webRoot, path));
     expect(offenders).toEqual([]);
+  });
+
+  it.each([
+    ["lib/tokens.ts", tsTokensPath],
+    ["email tokens", join(repoRoot, "supabase/functions/_shared/tokens.ts")],
+  ])("%s match the spec", (_label, path) => {
+    const values = tsTokens(path);
+    expect(Object.keys(values).length).toBeGreaterThan(0);
+    for (const [name, hex] of Object.entries(values)) {
+      expect(spec[name], name).toBe(hex);
+    }
+  });
+
+  it("email HTML only uses spec colours", () => {
+    const palette = new Set(Object.values(spec));
+    const dir = join(repoRoot, "supabase/templates");
+    const used = readdirSync(dir)
+      .filter((f) => f.endsWith(".html"))
+      .flatMap((f) =>
+        [
+          ...readFileSync(join(dir, f), "utf8").matchAll(/#[0-9A-Fa-f]{6}\b/g),
+        ].map((m) => m[0].toLowerCase()),
+      );
+    expect(used.length).toBeGreaterThan(0);
+    expect(used.filter((hex) => !palette.has(hex))).toEqual([]);
+  });
+
+  it("Edge Function code takes colours only from its tokens module", () => {
+    const dir = join(repoRoot, "supabase/functions");
+    const files = readdirSync(dir, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".ts") && !f.endsWith("_shared/tokens.ts"))
+      .filter((f) =>
+        /#[0-9A-Fa-f]{3,8}\b|\brgba?\(/.test(
+          readFileSync(join(dir, f), "utf8"),
+        ),
+      );
+    expect(files).toEqual([]);
   });
 });
