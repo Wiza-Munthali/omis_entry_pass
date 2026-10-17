@@ -29,7 +29,9 @@ describe("cn", () => {
       });
     const direct = walk(root)
       .filter((p) => !p.endsWith("lib/utils.ts"))
-      .filter((p) => /^import[^;]*from ["']cn["']/m.test(readFileSync(p, "utf8")))
+      .filter((p) =>
+        /^import[^;]*from ["']cn["']/m.test(readFileSync(p, "utf8")),
+      )
       .map((p) => relative(root, p));
     expect(direct).toEqual([]);
   });
