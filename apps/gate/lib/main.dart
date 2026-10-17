@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/env.dart';
+import 'core/observability.dart';
 import 'core/providers.dart';
 import 'core/router.dart';
 import 'core/theme/app_colors.dart';
@@ -18,7 +19,7 @@ Future<void> main() async {
     url: Env.supabaseUrl,
     publishableKey: Env.supabasePublishableKey,
   );
-  runApp(const ProviderScope(child: OmisGateApp()));
+  await runReported(() => runApp(const ProviderScope(child: OmisGateApp())));
 }
 
 class OmisGateApp extends ConsumerWidget {
@@ -30,6 +31,7 @@ class OmisGateApp extends ConsumerWidget {
     // opens the request (approvers) or home (guards).
     ref.listen(profileProvider, (previous, next) {
       final profile = next.value;
+      setReportedUser(profile?.id);
       if (profile == null ||
           !profile.isOperator ||
           previous?.value?.id == profile.id) {

@@ -26,4 +26,11 @@ abstract final class Env {
       firebaseProjectId.isNotEmpty &&
       firebaseApiKey.isNotEmpty &&
       firebaseMessagingSenderId.isNotEmpty;
+
+  // Error tracking (Sentry). Empty DSN = nothing is reported.
+  static const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+  static const sentryEnvironment = String.fromEnvironment(
+    'SENTRY_ENVIRONMENT',
+    defaultValue: 'development',
+  );
 }
