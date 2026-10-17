@@ -1,0 +1,230 @@
+-- Shared test helpers. Include at the top of a test file, inside its transaction:
+--   begin;
+--   \ir helpers/setup.psql
+-- Everything here is rolled back with the test.
+--
+--   tests.create_user(key, role)   auth user + profile (role via app_metadata), id stored under key
+--   tests.id(key)                  look up a fixture id
+--   tests.authenticate_as(key)     act as that user, the way PostgREST does (JWT claims + role)
+--   tests.authenticate_anon()      act as an anonymous API caller
+--   reset role;                    back to postgres (bypasses RLS) for setup and checks
+--   tests.build_world()            the standard fixtures used by the RLS tests (see below)
+
+create extension if not exists pgtap with schema extensions;
+
+create schema tests;
+grant usage on schema tests to anon, authenticated;
+
+create table tests.ids (key text primary key, id uuid not null);
+
+create function tests.id(p_key text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select id from tests.ids where key = p_key;
+$$;
+
+create function tests.remember(p_key text, p_id uuid)
+returns uuid
+language sql
+as $$
+  insert into tests.ids (key, id) values (p_key, p_id) returning id;
+$$;
+
+create function tests.create_user(p_key text, p_role text default 'staff', p_user_meta jsonb default '{}')
+returns uuid
+language plpgsql
+as $$
+declare
+  uid uuid := gen_random_uuid();
+begin
+  insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (
+    '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
+    p_key || '@test.invalid',
+    jsonb_build_object('provider', 'email', 'role', p_role),
+    p_user_meta,
+    now(), now()
+  );
+  return tests.remember(p_key, uid);
+end;
+$$;
+
+create function tests.authenticate_as(p_key text)
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', tests.id(p_key), 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+end;
+$$;
+
+create function tests.authenticate_anon()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  perform set_config('role', 'anon', true);
+end;
+$$;
+
+grant execute on all functions in schema tests to anon, authenticated;
+
+-- Standard fixtures:
+--   users     admin, admin2, receptionist, receptionist2, guard, guard2, staff, other_staff,
+--             inactive_admin (is_active = false)
+--   gates     main_gate
+--   people    staff_person (staff), other_person (other_staff), visitor, visitor2
+--   vehicles  staff_car, visitor_car
+--   passes    staff_pass, other_pass                 approved staff passes
+--             gate_pending      pending, source gate, requested by guard
+--             web_pending       pending, source web
+--             decided_by_rec    approved, decided by receptionist
+--             decided_by_admin  approved, decided by admin
+--   visits    open_visit (visitor on site), closed_visit (staff came and left)
+--   id_photos photo_pending (gate_pending), photo_rec (decided_by_rec), photo_admin (decided_by_admin)
+--   flags     flag_open
+create function tests.build_world()
+returns void
+language plpgsql
+as $$
+declare
+  today constant timestamptz := date_trunc('day', now());
+begin
+  perform tests.create_user('admin', 'admin');
+  perform tests.create_user('admin2', 'admin');
+  perform tests.create_user('receptionist', 'receptionist');
+  perform tests.create_user('receptionist2', 'receptionist');
+  perform tests.create_user('guard', 'guard');
+  perform tests.create_user('guard2', 'guard');
+  perform tests.create_user('staff', 'staff');
+  perform tests.create_user('other_staff', 'staff');
+  perform tests.create_user('inactive_admin', 'admin');
+  update public.profiles set is_active = false where id = tests.id('inactive_admin');
+
+  with r as (
+    insert into public.gates (name) values ('Test gate') returning id
+  ) insert into tests.ids select 'main_gate', id from r;
+
+  with r as (
+    insert into public.people (profile_id, full_name, id_number)
+    values (tests.id('staff'), 'Staff Person', 'T-STAFF-1') returning id
+  ) insert into tests.ids select 'staff_person', id from r;
+  with r as (
+    insert into public.people (profile_id, full_name, id_number)
+    values (tests.id('other_staff'), 'Other Staff', 'T-STAFF-2') returning id
+  ) insert into tests.ids select 'other_person', id from r;
+  with r as (
+    insert into public.people (full_name, id_number) values ('Visitor One', 'T-VIS-1') returning id
+  ) insert into tests.ids select 'visitor', id from r;
+  with r as (
+    insert into public.people (full_name, id_number) values ('Visitor Two', 'T-VIS-2') returning id
+  ) insert into tests.ids select 'visitor2', id from r;
+
+  with r as (
+    insert into public.vehicles (person_id, plate) values (tests.id('staff_person'), 'tt 1001') returning id
+  ) insert into tests.ids select 'staff_car', id from r;
+  with r as (
+    insert into public.vehicles (person_id, plate) values (tests.id('visitor'), 'TT 2002') returning id
+  ) insert into tests.ids select 'visitor_car', id from r;
+
+  with r as (
+    insert into public.passes (person_id, vehicle_id, type, status, valid_from, valid_until)
+    values (tests.id('staff_person'), tests.id('staff_car'), 'staff', 'approved', today, today + interval '365 days')
+    returning id
+  ) insert into tests.ids select 'staff_pass', id from r;
+  with r as (
+    insert into public.passes (person_id, type, status, valid_from, valid_until)
+    values (tests.id('other_person'), 'staff', 'approved', today, today + interval '365 days')
+    returning id
+  ) insert into tests.ids select 'other_pass', id from r;
+  with r as (
+    insert into public.passes (person_id, type, valid_from, valid_until, source, requested_by)
+    values (tests.id('visitor'), 'day', today, today + interval '1 day', 'gate', tests.id('guard'))
+    returning id
+  ) insert into tests.ids select 'gate_pending', id from r;
+  with r as (
+    insert into public.passes (person_id, type, valid_from, valid_until, source)
+    values (tests.id('visitor2'), 'day', today, today + interval '1 day', 'web')
+    returning id
+  ) insert into tests.ids select 'web_pending', id from r;
+  with r as (
+    insert into public.passes (person_id, vehicle_id, type, status, valid_from, valid_until, source, requested_by, decided_by, decided_at)
+    values (tests.id('visitor'), tests.id('visitor_car'), 'week', 'approved', today, today + interval '7 days', 'gate',
+    tests.id('guard'), tests.id('receptionist'), now())
+    returning id
+  ) insert into tests.ids select 'decided_by_rec', id from r;
+  with r as (
+    insert into public.passes (person_id, type, status, valid_from, valid_until, source, decided_by, decided_at)
+    values (tests.id('visitor2'), 'week', 'approved', today, today + interval '7 days', 'web', tests.id('admin'), now())
+    returning id
+  ) insert into tests.ids select 'decided_by_admin', id from r;
+
+  with r as (
+    insert into public.visits (pass_id, person_id, gate_id, vehicle_plate, entry_at, entry_by)
+    values (tests.id('decided_by_rec'), tests.id('visitor'), tests.id('main_gate'), 'TT2002', now() - interval '1 hour', tests.id('guard'))
+    returning id
+  ) insert into tests.ids select 'open_visit', id from r;
+  with r as (
+    insert into public.visits (pass_id, person_id, gate_id, entry_at, entry_by, exit_at, exit_by)
+    values (tests.id('staff_pass'), tests.id('staff_person'), tests.id('main_gate'),
+    now() - interval '5 hours', tests.id('guard'), now() - interval '4 hours', tests.id('guard'))
+    returning id
+  ) insert into tests.ids select 'closed_visit', id from r;
+
+  with r as (
+    insert into public.id_photos (pass_id, storage_path, uploaded_by)
+    values (tests.id('gate_pending'), tests.id('gate_pending') || '/a.jpg', tests.id('guard')) returning id
+  ) insert into tests.ids select 'photo_pending', id from r;
+  with r as (
+    insert into public.id_photos (pass_id, storage_path, uploaded_by)
+    values (tests.id('decided_by_rec'), tests.id('decided_by_rec') || '/b.jpg', tests.id('guard')) returning id
+  ) insert into tests.ids select 'photo_rec', id from r;
+  with r as (
+    insert into public.id_photos (pass_id, storage_path, uploaded_by)
+    values (tests.id('decided_by_admin'), tests.id('decided_by_admin') || '/c.jpg', tests.id('guard')) returning id
+  ) insert into tests.ids select 'photo_admin', id from r;
+
+  with r as (
+    insert into public.flags (type, pass_id) values ('scan_invalid_pass', tests.id('web_pending')) returning id
+  ) insert into tests.ids select 'flag_open', id from r;
+end;
+$$;
+
+-- Row counts as seen by postgres (no RLS), so "reads all" checks hold whether or
+-- not the dev seed is loaded. Call after build_world().
+create table tests.counts (tbl text primary key, n int not null);
+grant select on tests.counts to anon, authenticated;
+
+create function tests.snapshot_counts()
+returns void
+language plpgsql
+as $$
+declare
+  t text;
+  n int;
+begin
+  foreach t in array array['profiles', 'people', 'vehicles', 'passes', 'visits', 'gates',
+                           'id_photos', 'flags', 'settings', 'audit_log'] loop
+    execute format('select count(*) from public.%I', t) into n;
+    insert into tests.counts values (t, n) on conflict (tbl) do update set n = excluded.n;
+  end loop;
+end;
+$$;
+
+create function tests.total(p_tbl text)
+returns int
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select n from tests.counts where tbl = p_tbl;
+$$;
+grant execute on function tests.snapshot_counts(), tests.total(text) to anon, authenticated;
