@@ -28,6 +28,7 @@ cp supabase/functions/.env.example supabase/functions/.env
 ```
 
 Fill the URL and publishable key into `apps/web/.env.local` and `apps/gate/env/dev.json`.
+The functions `.env` works as copied: locally, emails go to Mailpit.
 The Android emulator reaches the host as `10.0.2.2`; on a real phone use your Mac's LAN IP.
 
 ## Local accounts (seed)
@@ -44,11 +45,18 @@ The Android emulator reaches the host as `10.0.2.2`; on a real phone use your Ma
 
 The seed also has two gates and visitor passes that are pending, approved (on site), rejected and expired.
 
+Staff sign-up is limited to `settings.allowed_email_domains` (`ghii.test` locally), enforced by the
+`before_user_created` auth hook. In a hosted project, enable the hook under Authentication → Hooks
+(Postgres function `private.before_user_created`) and set the sign-in email templates from
+[supabase/templates](supabase/templates).
+
 ## Day to day
 
 | Task | Command |
 | --- | --- |
 | Web dev server (http://localhost:3000) | `npm run dev` |
+| Edge Functions (needed for pass emails) | `npm run functions` |
+| Read emails (codes, passes) | http://127.0.0.1:54324 |
 | Gate app | `cd apps/gate && flutter run --dart-define-from-file=env/dev.json` |
 | Reset DB (migrations + seed) | `npm run db:reset` |
 | DB tests (pgTAP) | `npm run db:test` |
@@ -62,3 +70,4 @@ The seed also has two gates and visitor passes that are pending, approved (on si
 - Every table has RLS enabled, with a test per policy.
 - Colours come only from the design tokens in `apps/web/app/globals.css` and `apps/gate/lib/core/theme/app_colors.dart`. Tests in both apps fail if they drift from the spec or if a colour literal appears elsewhere.
 - `.env` files are never committed; the service-role key is used only inside Edge Functions.
+- Import `cn` from `@/lib/utils` (it knows the spec's type and radius scales), never from `cn` directly.
