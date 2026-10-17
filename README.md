@@ -50,12 +50,33 @@ Staff sign-up is limited to `settings.allowed_email_domains` (`ghii.test` locall
 (Postgres function `private.before_user_created`) and set the sign-in email templates from
 [supabase/templates](supabase/templates).
 
+### Visitor requests
+
+Visitors request a pass at `/visit` and follow it at `/r/{status_token}`. When reception approves
+or rejects a web request, the database calls the `notify-visitor` Edge Function (via `pg_net`) to
+email the visitor. That needs two Vault entries, which the seed creates locally. In a hosted project,
+create them once in the SQL editor, using the same secret as the function's `INTERNAL_HOOK_SECRET`:
+
+```sql
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1', 'functions_url');
+select vault.create_secret('<long random value>', 'internal_hook_secret');
+```
+
+Without them, decisions still work; only the email is skipped (with a warning in the database log).
+
+Requests are limited to 5 per hour per phone and per IP. Locally every request shares one IP, so
+clear the counter when testing:
+
+```bash
+docker exec supabase_db_omis-entry psql -U postgres -c "truncate private.request_attempts"
+```
+
 ## Day to day
 
 | Task | Command |
 | --- | --- |
 | Web dev server (http://localhost:3000) | `npm run dev` |
-| Edge Functions (needed for pass emails) | `npm run functions` |
+| Edge Functions (pass emails, visitor requests) | `npm run functions` |
 | Read emails (codes, passes) | http://127.0.0.1:54324 |
 | Gate app | `cd apps/gate && flutter run --dart-define-from-file=env/dev.json` |
 | Reset DB (migrations + seed) | `npm run db:reset` |
