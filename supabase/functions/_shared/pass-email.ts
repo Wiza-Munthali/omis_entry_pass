@@ -210,3 +210,65 @@ export function renderRejectionEmail(input: RejectionEmailInput) {
   ].join("\n");
   return { subject, html, text };
 }
+
+export type ApprovalRequestEmailInput = {
+  fullName: string;
+  passType: PassType;
+  hostName?: string | null;
+  source: "web" | "gate";
+  requestedBy?: string | null;
+  requestedAt: string; // ISO
+  validFrom: string;
+  validUntil: string;
+  escalatedMinutes?: number | null;
+};
+
+/** "10:42" in Africa/Blantyre. */
+function formatLocalTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(
+    new Date(iso),
+  );
+}
+
+/** New request for reception (or, when escalated, for admins). */
+export function renderApprovalRequestEmail(input: ApprovalRequestEmailInput) {
+  const escalated = input.escalatedMinutes != null;
+  const subject = escalated
+    ? `Waiting ${input.escalatedMinutes} min for approval: ${input.fullName}`
+    : `New visitor request: ${input.fullName}`;
+  const type = TYPE_LABEL[input.passType];
+  const source =
+    input.source === "gate"
+      ? `At the gate${input.requestedBy ? ` (registered by ${escapeHtml(input.requestedBy)})` : ""}`
+      : "Online request";
+  const rows: [string, string][] = [
+    ["Visiting", escapeHtml(input.hostName ?? "—")],
+    ["Pass", `${type}, ${formatValidity(input.passType, input.validFrom, input.validUntil)}`],
+    ["Requested", `${formatLocalTime(input.requestedAt)} · ${source}`],
+  ];
+  const lead = escalated
+    ? `No one has approved this request yet. ${input.source === "gate" ? "The visitor is waiting at the gate." : ""}`.trim()
+    : input.source === "gate"
+      ? "A visitor is waiting at the gate."
+      : "A visitor has asked for a pass.";
+
+  const html = layout(
+    subject,
+    [
+      header(escapeHtml(input.fullName), chip(escalated ? "Waiting" : "Pending", colors.warning, colors.warningSoft)),
+      paragraph(lead),
+      details(rows),
+      paragraph("Open the OMIS Entry gate app and go to <strong>Approvals</strong> to approve or reject it."),
+    ].join("\n") + "\n            <tr><td style=\"height:16px\"></td></tr>",
+  );
+  const text = [
+    subject,
+    lead,
+    `Visiting: ${input.hostName ?? "—"}`,
+    `Pass: ${type}, ${formatValidity(input.passType, input.validFrom, input.validUntil)}`,
+    `Requested: ${formatLocalTime(input.requestedAt)} (${input.source === "gate" ? "at the gate" : "online"})`,
+    "",
+    "Open the OMIS Entry gate app → Approvals to approve or reject it.",
+  ].join("\n");
+  return { subject, html, text };
+}

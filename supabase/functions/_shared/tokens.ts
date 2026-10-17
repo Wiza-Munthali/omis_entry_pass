@@ -13,5 +13,7 @@ export const colors = {
   surface2: "#F5F5F2",
   border: "#E4E4E0",
   danger: "#C0392B",
+  warning: "#B7791F",
+  warningSoft: "#FDF1DC",
   dangerSoft: "#FBE3E0",
 } as const;
