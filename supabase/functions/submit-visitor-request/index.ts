@@ -7,6 +7,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { corsHeaders, json } from "../_shared/http.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
 const schema = z.object({
   fullName: z.string().trim().min(2).max(80),
@@ -47,7 +48,7 @@ function clientIp(req: Request): string | null {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
 
-Deno.serve(async (req) => {
+serve("submit-visitor-request", async (req) => {
   const cors = corsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" }, cors);
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
     if (error.message === "rate_limited") return json(429, { error: "rate_limited" }, cors);
     const field = FIELD_FOR_ERROR[error.message];
     if (field) return json(400, { error: "invalid_input", fields: [field] }, cors);
-    console.error("submit_visitor_request failed", error);
+    reportError("submit-visitor-request", error, "submit_visitor_request failed");
     return json(500, { error: "submit_failed" }, cors);
   }
 

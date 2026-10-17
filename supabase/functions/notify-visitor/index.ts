@@ -10,8 +10,9 @@ import { json, safeEqual } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
 import { QR_CONTENT_ID, renderPassEmail, renderRejectionEmail, renderRevokedEmail } from "../_shared/pass-email.ts";
 import { qrPngBase64 } from "../_shared/qr.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
-Deno.serve(async (req) => {
+serve("notify-visitor", async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
   const expected = Deno.env.get("INTERNAL_HOOK_SECRET");
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
       return json(409, { error: "not_decided", status: pass.status });
     }
   } catch (e) {
-    console.error("notify-visitor failed", e);
+    reportError("notify-visitor", e, "email failed");
     return json(502, { error: "email_failed" });
   }
 

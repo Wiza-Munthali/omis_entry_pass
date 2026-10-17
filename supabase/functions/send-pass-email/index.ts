@@ -8,11 +8,12 @@ import { json } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
 import { QR_CONTENT_ID, renderPassEmail } from "../_shared/pass-email.ts";
 import { qrPngBase64 } from "../_shared/qr.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
 const COLUMNS =
   "id, type, status, qr_token, status_token, valid_from, valid_until, host_name, contact_email, people!inner(full_name, email, profile_id), vehicles(plate)";
 
-Deno.serve(async (req) => {
+serve("send-pass-email", async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   const authorization = req.headers.get("Authorization");
   if (!authorization) return json(401, { error: "not_signed_in" });
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
       ],
     });
   } catch (e) {
-    console.error("send-pass-email failed", e);
+    reportError("send-pass-email", e, "email failed");
     return json(502, { error: "email_failed" });
   }
   return json(200, { sent: true });

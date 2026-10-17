@@ -8,11 +8,12 @@ import { adminCaller, serviceClient } from "../_shared/admin.ts";
 import { json } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
 import { renderOperatorInviteEmail } from "../_shared/pass-email.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
 const ROLES = ["guard", "receptionist", "admin"] as const;
 type Role = (typeof ROLES)[number];
 
-Deno.serve(async (req) => {
+serve("invite-operator", async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   if (!(await adminCaller(req))) return json(403, { error: "admins_only" });
 
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
   try {
     await sendEmail({ to: email, ...renderOperatorInviteEmail({ fullName, role, orgName: settings?.org_name ?? "GHII" }) });
   } catch (e) {
-    console.error("invite-operator: email failed", e);
+    reportError("invite-operator", e, "email failed");
     return json(200, { user_id: data.user?.id, emailed: false });
   }
   return json(200, { user_id: data.user?.id, emailed: true });

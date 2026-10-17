@@ -10,10 +10,11 @@ import { pushConfigured, sendPush } from "../_shared/fcm.ts";
 import { json, safeEqual } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
 import { renderApprovalRequestEmail } from "../_shared/pass-email.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
 type Recipient = { id: string; email: string; fcm_token: string | null };
 
-Deno.serve(async (req) => {
+serve("notify-approvers", async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   const expected = Deno.env.get("INTERNAL_HOOK_SECRET");
   if (!expected || !safeEqual(req.headers.get("x-internal-secret") ?? "", expected)) {
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
   const emailResults = await Promise.allSettled(recipients.map((r) => sendEmail({ to: r.email, ...email })));
   emailResults
     .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-    .forEach((r) => console.error("notify-approvers email failed", r.reason));
+    .forEach((r) => reportError("notify-approvers", r.reason, "email failed"));
 
   let push = { sent: 0, invalid: [] as string[] };
   if (pushConfigured()) {
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
       });
       if (push.invalid.length) await supabase.from("profiles").update({ fcm_token: null }).in("fcm_token", push.invalid);
     } catch (e) {
-      console.error("notify-approvers push failed", e);
+      reportError("notify-approvers", e, "push failed");
     }
   }
 

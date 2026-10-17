@@ -5,8 +5,9 @@
 // Called only by the database (cleanup-id-photos cron job via pg_net) with x-internal-secret.
 import { serviceClient } from "../_shared/admin.ts";
 import { json, safeEqual } from "../_shared/http.ts";
+import { reportError, serve } from "../_shared/report.ts";
 
-Deno.serve(async (req) => {
+serve("cleanup-id-photos", async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   const expected = Deno.env.get("INTERNAL_HOOK_SECRET");
   if (!expected || !safeEqual(req.headers.get("x-internal-secret") ?? "", expected)) {
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
 
   const { error: removeError } = await supabase.storage.from("id-photos").remove(due.map((p) => p.storage_path));
   if (removeError) {
-    console.error("cleanup-id-photos: storage remove failed", removeError);
+    reportError("cleanup-id-photos", removeError, "storage remove failed");
     return json(502, { error: "storage_failed" });
   }
   const { error: deleteError } = await supabase.from("id_photos").delete().in("id", due.map((p) => p.id));
