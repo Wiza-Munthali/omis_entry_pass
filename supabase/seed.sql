@@ -141,3 +141,12 @@ begin
           today - interval '7 days' + interval '9 hours 55 minutes', guard_id);
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Vault entries the database uses to call Edge Functions (decision emails).
+-- Local values only: the Kong gateway inside the Supabase Docker network and a
+-- dev-only shared secret matching supabase/functions/.env(.example).
+-- In a hosted project, create both with real values (see README).
+-- ---------------------------------------------------------------------------
+select vault.create_secret('http://supabase_kong_omis-entry:8000/functions/v1', 'functions_url');
+select vault.create_secret('local-dev-only-internal-secret', 'internal_hook_secret');
