@@ -110,10 +110,14 @@ class ScanResultSheet extends StatefulWidget {
     super.key,
     required this.result,
     this.autoDismiss = const Duration(seconds: 3),
+    this.onReview,
   });
 
   final ScanResult result;
   final Duration autoDismiss;
+
+  /// Scan-and-approve: shown as "Review request" for a pending pass scanned by an approver.
+  final VoidCallback? onReview;
 
   @override
   State<ScanResultSheet> createState() => _ScanResultSheetState();
@@ -258,6 +262,15 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               ),
             ],
             const SizedBox(height: AppSpacing.s2),
+            if (widget.onReview != null) ...[
+              FilledButton.icon(
+                key: const Key('review-request'),
+                onPressed: widget.onReview,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Review request'),
+              ),
+              const SizedBox(height: AppSpacing.s1),
+            ],
             FilledButton.icon(
               key: const Key('result-action'),
               onPressed: () => Navigator.of(context).maybePop(),

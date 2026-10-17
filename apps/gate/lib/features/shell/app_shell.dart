@@ -47,7 +47,11 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = navItemsFor(ref.watch(profileProvider).value?.role);
+    final profile = ref.watch(profileProvider).value;
+    final items = navItemsFor(profile?.role);
+    final pending = profile?.canApprove == true
+        ? (ref.watch(pendingCountProvider).value ?? 0)
+        : 0;
     return Scaffold(
       body: child,
       extendBody: true,
@@ -72,6 +76,7 @@ class AppShell extends ConsumerWidget {
                   child: _NavButton(
                     item: item,
                     active: item.location == location,
+                    badge: item.location == '/approvals' ? pending : 0,
                     onTap: () {
                       if (item.location == null) {
                         showAccountSheet(context, ref);
@@ -96,18 +101,23 @@ class _NavButton extends StatelessWidget {
     required this.item,
     required this.active,
     required this.onTap,
+    this.badge = 0,
   });
 
   final NavItem item;
   final bool active;
   final VoidCallback onTap;
 
+  /// Count bubble (pending approvals); hidden at 0.
+  final int badge;
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      key: Key('nav-${item.label}'),
       button: true,
       selected: active,
-      label: item.label,
+      label: badge > 0 ? '${item.label}, $badge waiting' : item.label,
       child: InkWell(
         onTap: onTap,
         customBorder: const StadiumBorder(),
@@ -116,17 +126,47 @@ class _NavButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: active ? AppColors.ink : AppColors.surface2,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  item.icon,
-                  color: active ? AppColors.brand : AppColors.ink,
-                ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.ink : AppColors.surface2,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      item.icon,
+                      color: active ? AppColors.brand : AppColors.ink,
+                    ),
+                  ),
+                  if (badge > 0)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 22),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: const ShapeDecoration(
+                          color: AppColors.danger,
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text(
+                          badge > 99 ? '99+' : '$badge',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.surface,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 4),
               ExcludeSemantics(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets.dart';
+import '../../data/models.dart';
 import 'scan_result_sheet.dart';
 import 'scan_session.dart';
 
@@ -47,20 +50,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
     switch (event) {
       case ScanSucceeded(:final result):
-        await (OutcomeView.of(result).allowed
-            ? HapticFeedback.mediumImpact()
-            : HapticFeedback.heavyImpact());
-        if (!mounted) return;
-        await showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => ScanResultSheet(result: result),
+        unawaited(
+          OutcomeView.of(result).allowed
+              ? HapticFeedback.mediumImpact()
+              : HapticFeedback.heavyImpact(),
         );
+        if (!mounted) return;
+        final canApprove = ref.read(profileProvider).value?.canApprove ?? false;
+        final reviewId =
+            canApprove &&
+                result.outcome == ScanOutcome.pending &&
+                result.passId != null
+            ? result.passId
+            : null;
+        var review = false;
+        await showModalBottomSheet<void>(
+          context: context,
+          useRootNavigator: true,
+          isScrollControlled: true,
+          builder: (sheetContext) => ScanResultSheet(
+            result: result,
+            onReview: reviewId == null
+                ? null
+                : () {
+                    review = true;
+                    Navigator.of(sheetContext).pop();
+                  },
+          ),
+        );
+        if (review && mounted) await context.push('/approvals/$reviewId');
       case ScanFailed(:final message):
-        await HapticFeedback.heavyImpact();
+        unawaited(HapticFeedback.heavyImpact());
         if (!mounted) return;
         await showModalBottomSheet<void>(
           context: context,
+          useRootNavigator: true,
           builder: (_) => ScanErrorSheet(message: message),
         );
     }

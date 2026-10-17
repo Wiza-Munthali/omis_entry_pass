@@ -12,6 +12,7 @@ Future<void> showAccountSheet(BuildContext context, WidgetRef ref) {
   final gate = ref.read(selectedGateProvider).value;
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     showDragHandle: true,
     builder: (sheetContext) => SafeArea(
       child: Padding(
@@ -55,7 +56,7 @@ Future<void> showAccountSheet(BuildContext context, WidgetRef ref) {
               label: const Text('Sign out'),
               onPressed: () {
                 Navigator.of(sheetContext).pop();
-                ref.read(authRepositoryProvider).signOut();
+                signOut(ref);
               },
             ),
           ],

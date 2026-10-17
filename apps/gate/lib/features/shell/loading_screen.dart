@@ -48,8 +48,7 @@ class LoadingScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.s1),
                       OutlinedButton(
-                        onPressed: () =>
-                            ref.read(authRepositoryProvider).signOut(),
+                        onPressed: () => signOut(ref),
                         child: const Text('Sign out'),
                       ),
                     ],

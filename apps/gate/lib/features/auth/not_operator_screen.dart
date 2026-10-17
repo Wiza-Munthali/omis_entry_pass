@@ -39,7 +39,7 @@ class NotOperatorScreen extends ConsumerWidget {
               ),
               const Spacer(),
               FilledButton(
-                onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                onPressed: () => signOut(ref),
                 child: const Text('Sign out'),
               ),
             ],

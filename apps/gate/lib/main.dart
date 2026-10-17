@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/env.dart';
+import 'core/providers.dart';
 import 'core/router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
@@ -25,6 +26,28 @@ class OmisGateApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Register for push once an operator is signed in; tapping a notification
+    // opens the request (approvers) or home (guards).
+    ref.listen(profileProvider, (previous, next) {
+      final profile = next.value;
+      if (profile == null ||
+          !profile.isOperator ||
+          previous?.value?.id == profile.id) {
+        return;
+      }
+      final router = ref.read(routerProvider);
+      ref
+          .read(pushServiceProvider)
+          .start(
+            onToken: (token) => ref
+                .read(gateRepositoryProvider)
+                .setPushToken(profile.id, token),
+            onOpen: (passId) => profile.canApprove
+                ? router.push('/approvals/$passId')
+                : router.go('/home'),
+          );
+    });
+
     return MaterialApp.router(
       title: 'OMIS Entry',
       debugShowCheckedModeBanner: false,

@@ -2,14 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/approvals/approvals_screen.dart';
+import '../features/approvals/request_detail_screen.dart';
 import '../features/auth/not_operator_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/gate/choose_gate_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/onsite/on_site_screen.dart';
+import '../features/requests/new_visitor_screen.dart';
+import '../features/requests/waiting_screen.dart';
 import '../features/scan/scanner_screen.dart';
 import '../features/shell/app_shell.dart';
-import '../features/shell/coming_soon_screen.dart';
 import '../features/shell/loading_screen.dart';
 import 'providers.dart';
 import 'redirect.dart';
@@ -42,6 +45,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/gate', builder: (_, _) => const ChooseGateScreen()),
       // Full-screen camera, outside the tab bar.
       GoRoute(path: '/scan', builder: (_, _) => const ScannerScreen()),
+      GoRoute(
+        path: '/approvals/:id',
+        builder: (_, state) =>
+            RequestDetailScreen(passId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/requests/:id',
+        builder: (_, state) =>
+            WaitingScreen(passId: state.pathParameters['id']!),
+      ),
       ShellRoute(
         builder: (_, state, child) =>
             AppShell(location: state.matchedLocation, child: child),
@@ -57,22 +70,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/new-visitor',
-            pageBuilder: (_, _) => const NoTransitionPage(
-              child: ComingSoonScreen(
-                title: 'New visitor',
-                text:
-                    'Registering visitors at the gate arrives in the next update.',
-              ),
-            ),
+            pageBuilder: (_, _) =>
+                const NoTransitionPage(child: NewVisitorScreen()),
           ),
           GoRoute(
             path: '/approvals',
-            pageBuilder: (_, _) => const NoTransitionPage(
-              child: ComingSoonScreen(
-                title: 'Approvals',
-                text: 'The approval queue arrives in the next update.',
-              ),
-            ),
+            pageBuilder: (_, _) =>
+                const NoTransitionPage(child: ApprovalsScreen()),
           ),
         ],
       ),

@@ -105,7 +105,7 @@ class ChooseGateScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.s2),
             TextButton(
-              onPressed: () => ref.read(authRepositoryProvider).signOut(),
+              onPressed: () => signOut(ref),
               child: const Text(
                 'Sign out',
                 style: TextStyle(color: AppColors.textMuted),
