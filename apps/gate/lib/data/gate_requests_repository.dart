@@ -17,7 +17,8 @@ class CreatedRequest {
 
 /// The guard's side of visitor requests (G7–G9) and returning visitors.
 abstract class GateRequestsRepository {
-  Future<CreatedRequest> create(NewVisitor visitor);
+  /// [clientRequestId] makes a retried send idempotent (the outbox passes its event id).
+  Future<CreatedRequest> create(NewVisitor visitor, {String? clientRequestId});
   Future<void> uploadIdPhoto(String passId, Uint8List jpeg);
   Future<List<GateRequest>> mine();
 
@@ -63,26 +64,27 @@ class SupabaseGateRequestsRepository implements GateRequestsRepository {
   }
 
   @override
-  Future<CreatedRequest> create(NewVisitor v) => _call(() async {
-    final json = await _client.rpc(
-      'create_gate_request',
-      params: {
-        'p_full_name': v.fullName,
-        'p_id_number': v.idNumber,
-        'p_pass_type': v.passType.name,
-        'p_host_name': v.hostName,
-        'p_purpose': v.purpose,
-        'p_phone': v.phone,
-        'p_plate': v.plate,
-        'p_client_request_id': newEventId(),
-      },
-    );
-    final m = Map<String, dynamic>.from(json as Map);
-    return CreatedRequest(
-      passId: m['pass_id'] as String,
-      statusToken: m['status_token'] as String,
-    );
-  });
+  Future<CreatedRequest> create(NewVisitor v, {String? clientRequestId}) =>
+      _call(() async {
+        final json = await _client.rpc(
+          'create_gate_request',
+          params: {
+            'p_full_name': v.fullName,
+            'p_id_number': v.idNumber,
+            'p_pass_type': v.passType.name,
+            'p_host_name': v.hostName,
+            'p_purpose': v.purpose,
+            'p_phone': v.phone,
+            'p_plate': v.plate,
+            'p_client_request_id': newEventId(),
+          },
+        );
+        final m = Map<String, dynamic>.from(json as Map);
+        return CreatedRequest(
+          passId: m['pass_id'] as String,
+          statusToken: m['status_token'] as String,
+        );
+      });
 
   @override
   Future<void> uploadIdPhoto(String passId, Uint8List jpeg) => _call(() async {

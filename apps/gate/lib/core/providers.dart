@@ -7,8 +7,12 @@ import '../data/gate_repository.dart';
 import '../data/gate_requests_repository.dart';
 import '../data/local_db.dart';
 import '../data/models.dart';
+import '../data/offline_store.dart';
 import '../data/request_models.dart';
+import '../data/scan_service.dart';
 import '../data/settings_repository.dart';
+import '../data/sync_worker.dart';
+import 'connectivity.dart';
 import 'env.dart';
 import 'push.dart';
 
@@ -148,3 +152,50 @@ Future<void> signOut(WidgetRef ref) async {
   }
   await ref.read(authRepositoryProvider).signOut();
 }
+
+// ---------------------------------------------------------------------------
+// Phase 7: offline scanning
+// ---------------------------------------------------------------------------
+
+final connectivityProvider = Provider<ConnectivityService>(
+  (ref) => DeviceConnectivity(),
+);
+
+final onlineProvider = StreamProvider<bool>((ref) async* {
+  final c = ref.watch(connectivityProvider);
+  yield await c.isOnline();
+  yield* c.onlineChanges();
+});
+
+final offlineStoreProvider = Provider<OfflineStore>(
+  (ref) => OfflineStore(ref.watch(localDbProvider)),
+);
+
+final scanServiceProvider = Provider<ScanService>(
+  (ref) => ScanService(
+    remote: ref.watch(gateRepositoryProvider),
+    store: ref.watch(offlineStoreProvider),
+    connectivity: ref.watch(connectivityProvider),
+  ),
+);
+
+/// Runs while an operator is signed in (watched by the tab shell): syncs the outbox
+/// and refreshes the offline cache.
+final syncWorkerProvider = Provider<SyncWorker>((ref) {
+  final worker = SyncWorker(
+    store: ref.watch(offlineStoreProvider),
+    remote: ref.watch(gateRepositoryProvider),
+    requests: ref.watch(gateRequestsRepositoryProvider),
+    connectivity: ref.watch(connectivityProvider),
+  )..start();
+  ref.onDispose(worker.stop);
+  return worker;
+});
+
+final outboxCountProvider = StreamProvider<int>(
+  (ref) => ref.watch(offlineStoreProvider).watchPendingCount(),
+);
+
+final outboxFailedProvider = StreamProvider<int>(
+  (ref) => ref.watch(offlineStoreProvider).watchFailedCount(),
+);

@@ -91,7 +91,10 @@ enum ScanOutcome {
   rejected,
   revoked,
   expired,
-  notYetValid;
+  notYetValid,
+
+  /// Offline, and the code is not in this phone's cache: cannot be checked now.
+  unknownOffline;
 
   static ScanOutcome parse(String value) => switch (value) {
     'entry_recorded' => entryRecorded,
@@ -124,6 +127,8 @@ class ScanResult {
     this.duration,
     this.replayed = false,
     this.passId,
+    this.offline = false,
+    this.conflict,
   });
 
   final ScanOutcome outcome;
@@ -131,6 +136,12 @@ class ScanResult {
   /// The pass that was scanned (absent for unknown codes). Approvers use it to
   /// open a pending request straight from the scan (scan-and-approve).
   final String? passId;
+
+  /// Decided on this phone without a network; queued to sync.
+  final bool offline;
+
+  /// Set when an offline scan synced but the pass had changed meanwhile ("revoked"…).
+  final String? conflict;
   final String? fullName;
   final PassType? passType;
   final String? plate;
@@ -158,6 +169,7 @@ class ScanResult {
           : Duration(seconds: (j['duration_seconds'] as num).toInt()),
       replayed: j['replayed'] == true,
       passId: j['pass_id'] as String?,
+      conflict: j['conflict'] as String?,
     );
   }
 }

@@ -5,8 +5,12 @@ import 'models.dart';
 
 /// Thrown when the server cannot be reached or refuses a call.
 class GateFailure implements Exception {
-  const GateFailure(this.message);
+  const GateFailure(this.message, {this.network = false});
   final String message;
+
+  /// True when the server could not be reached (as opposed to refusing the call).
+  /// Scans and gate requests then fall back to the offline outbox.
+  final bool network;
   @override
   String toString() => message;
 }
@@ -26,6 +30,40 @@ abstract class GateRepository {
 
   /// Saves (or clears, with null) this phone's push token on the operator's profile.
   Future<void> setPushToken(String userId, String? token);
+
+  /// Approved pass fingerprints and open visits for the offline cache.
+  Future<OfflineCacheData> offlineCache();
+
+  /// Sends a scan made offline: by fingerprint, with its original time and event id.
+  Future<ScanResult> recordOfflineScan({
+    required String tokenHash,
+    required String gateId,
+    required DateTime scannedAt,
+    required String eventId,
+  });
+}
+
+/// What offline_pass_cache returns.
+class OfflineCacheData {
+  const OfflineCacheData({
+    required this.generatedAt,
+    required this.passes,
+    required this.openVisits,
+  });
+
+  final DateTime generatedAt;
+  final List<Map<String, dynamic>> passes;
+  final List<Map<String, dynamic>> openVisits;
+
+  factory OfflineCacheData.fromJson(Map<String, dynamic> j) => OfflineCacheData(
+    generatedAt: DateTime.parse(j['generated_at'] as String),
+    passes: ((j['passes'] as List?) ?? const [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList(),
+    openVisits: ((j['open_visits'] as List?) ?? const [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList(),
+  );
 }
 
 class SupabaseGateRepository implements GateRepository {
@@ -119,6 +157,31 @@ class SupabaseGateRepository implements GateRepository {
         );
         return ScanResult.fromJson(Map<String, dynamic>.from(json as Map));
       });
+
+  @override
+  Future<OfflineCacheData> offlineCache() => _call(() async {
+    final json = await _client.rpc('offline_pass_cache');
+    return OfflineCacheData.fromJson(Map<String, dynamic>.from(json as Map));
+  });
+
+  @override
+  Future<ScanResult> recordOfflineScan({
+    required String tokenHash,
+    required String gateId,
+    required DateTime scannedAt,
+    required String eventId,
+  }) => _call(() async {
+    final json = await _client.rpc(
+      'record_offline_scan',
+      params: {
+        'p_token_hash': tokenHash,
+        'p_gate_id': gateId,
+        'p_scanned_at': scannedAt.toUtc().toIso8601String(),
+        'p_client_event_id': eventId,
+      },
+    );
+    return ScanResult.fromJson(Map<String, dynamic>.from(json as Map));
+  });
 
   @override
   Future<void> setPushToken(String userId, String? token) => _call(
