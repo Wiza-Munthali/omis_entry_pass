@@ -6,17 +6,14 @@ import { useState } from "react";
  * Today's entries per hour (A2). One series → one hue (brand-strong, which clears 3:1
  * on the card), no legend (the title names it). Bars ≤ 24 px with rounded tops on one
  * baseline, a 2 px gap, recessive gridlines, the peak labelled directly, a tooltip per
- * bar, and the same numbers as a table for screen readers.
+ * bar, and the same numbers as a table for screen readers. Every entry of the day is
+ * shown, so the bars always add up to the "Entries today" figure.
  */
-export function HourlyChart({
-  counts,
-  from = 5,
-  to = 22,
-}: {
-  counts: number[];
-  from?: number;
-  to?: number;
-}) {
+export function HourlyChart({ counts }: { counts: number[] }) {
+  // Usual gate hours, widened to include any hour that had entries (night shifts).
+  const busy = counts.flatMap((n, h) => (n > 0 ? [h] : []));
+  const from = Math.min(5, ...busy);
+  const to = Math.max(22, ...busy);
   const hours = Array.from({ length: to - from + 1 }, (_, i) => from + i);
   const values = hours.map((h) => counts[h] ?? 0);
   const max = Math.max(4, ...values);
