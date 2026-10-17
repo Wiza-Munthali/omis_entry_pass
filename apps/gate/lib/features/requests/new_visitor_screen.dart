@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/event_id.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -78,25 +79,74 @@ class _NewVisitorScreenState extends ConsumerState<NewVisitorScreen> {
     }
   }
 
+  NewVisitor _visitor() => NewVisitor(
+    fullName: _name.text.trim(),
+    idNumber: _id.text.trim(),
+    hostName: _host.text.trim(),
+    purpose: _purpose!,
+    passType: _type,
+    phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+    plate: _plate.text.trim().isEmpty ? null : _plate.text.trim(),
+  );
+
+  void _resetForm() {
+    _form.currentState!.reset();
+    for (final c in [_name, _id, _phone, _plate, _host]) {
+      c.clear();
+    }
+    setState(() {
+      _purpose = null;
+      _type = PassType.day;
+      _photo = null;
+    });
+  }
+
+  /// No network: keep the request (and photo) on the phone; the sync worker sends it.
+  Future<void> _queue(String requestId) async {
+    final v = _visitor();
+    await ref
+        .read(offlineStoreProvider)
+        .enqueue(
+          kind: 'request',
+          eventId: requestId,
+          payload: {
+            'full_name': v.fullName,
+            'id_number': v.idNumber,
+            'host_name': v.hostName,
+            'purpose': v.purpose,
+            'pass_type': v.passType.name,
+            'phone': v.phone,
+            'plate': v.plate,
+          },
+          photo: _photo,
+        );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('request-queued'),
+        content: Text(
+          'No connection. ${v.fullName}\'s request is saved and will send when the phone is back online.',
+        ),
+      ),
+    );
+    _resetForm();
+  }
+
   Future<void> _send() async {
     if (!_form.currentState!.validate()) return;
     setState(() {
       _sending = true;
       _error = null;
     });
+    // One id for this request whether it goes now or later: a retry never duplicates it.
+    final requestId = newEventId();
     final repo = ref.read(gateRequestsRepositoryProvider);
     try {
-      final created = await repo.create(
-        NewVisitor(
-          fullName: _name.text.trim(),
-          idNumber: _id.text.trim(),
-          hostName: _host.text.trim(),
-          purpose: _purpose!,
-          passType: _type,
-          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-          plate: _plate.text.trim().isEmpty ? null : _plate.text.trim(),
-        ),
-      );
+      if (!await ref.read(connectivityProvider).isOnline()) {
+        await _queue(requestId);
+        return;
+      }
+      final created = await repo.create(_visitor(), clientRequestId: requestId);
       var photoFailed = false;
       if (_photo != null) {
         try {
@@ -116,18 +166,14 @@ class _NewVisitorScreenState extends ConsumerState<NewVisitorScreen> {
           ),
         );
       }
-      _form.currentState!.reset();
-      for (final c in [_name, _id, _phone, _plate, _host]) {
-        c.clear();
-      }
-      setState(() {
-        _purpose = null;
-        _type = PassType.day;
-        _photo = null;
-      });
+      _resetForm();
       context.push('/requests/${created.passId}');
     } on GateFailure catch (e) {
-      setState(() => _error = e.message);
+      if (e.network) {
+        await _queue(requestId);
+      } else {
+        setState(() => _error = e.message);
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }

@@ -12,6 +12,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets.dart';
 import '../../data/models.dart';
 import 'scan_result_sheet.dart';
+import '../shell/offline_banner.dart';
 import 'scan_session.dart';
 
 /// G4 Scanner: full-screen camera, teal-cornered viewfinder, torch and close.
@@ -37,8 +38,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   }
 
   ScanSession _sessionFor(String gateId) => _session ??= ScanSession(
-    repository: ref.read(gateRepositoryProvider),
-    gateId: gateId,
+    record: (code) => ref.read(scanServiceProvider).scan(code, gateId),
   );
 
   Future<void> _onDetect(BarcodeCapture capture) async {
@@ -105,6 +105,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           ),
           const IgnorePointer(
             child: CustomPaint(painter: _ViewfinderPainter()),
+          ),
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: OfflineBanner(),
           ),
           SafeArea(
             child: Padding(

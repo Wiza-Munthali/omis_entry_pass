@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models.dart';
 import 'account_sheet.dart';
+import 'offline_banner.dart';
 
 class NavItem {
   const NavItem(this.label, this.icon, this.location);
@@ -52,8 +53,20 @@ class AppShell extends ConsumerWidget {
     final pending = profile?.canApprove == true
         ? (ref.watch(pendingCountProvider).value ?? 0)
         : 0;
+    ref.watch(syncWorkerProvider); // sync and cache refresh run while signed in
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: _bannerShowing(ref),
+              child: child,
+            ),
+          ),
+        ],
+      ),
       extendBody: true,
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(
@@ -187,4 +200,12 @@ class _NavButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Whether the offline banner is visible (it then takes care of the status-bar inset).
+bool _bannerShowing(WidgetRef ref) {
+  final online = ref.watch(onlineProvider).value ?? true;
+  final waiting = ref.watch(outboxCountProvider).value ?? 0;
+  final failed = ref.watch(outboxFailedProvider).value ?? 0;
+  return !online || waiting > 0 || failed > 0;
 }

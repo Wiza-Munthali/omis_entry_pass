@@ -92,6 +92,15 @@ class OutcomeView {
       bg: AppColors.warningSoft,
       allowed: false,
     ),
+    ScanOutcome.unknownOffline => const OutcomeView(
+      title: 'Can\'t check offline',
+      subtitle:
+          'This code is not on this phone\'s offline list. Wait for the connection, or call reception.',
+      icon: Icons.cloud_off,
+      fg: AppColors.warning,
+      bg: AppColors.warningSoft,
+      allowed: false,
+    ),
     ScanOutcome.invalid => const OutcomeView(
       title: 'Unknown code',
       subtitle: 'This QR code is not an OMIS Entry pass.',
@@ -193,6 +202,21 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               style: t.headlineMedium,
               textAlign: TextAlign.center,
             ),
+            if (r.offline && view.allowed) ...[
+              const SizedBox(height: 8),
+              const Center(
+                child: Chip(
+                  key: Key('saved-offline'),
+                  avatar: Icon(
+                    Icons.cloud_off,
+                    size: 18,
+                    color: AppColors.warning,
+                  ),
+                  label: Text('Saved offline — will sync'),
+                  backgroundColor: AppColors.warningSoft,
+                ),
+              ),
+            ],
             if (view.subtitle != null) ...[
               const SizedBox(height: 4),
               Text(

@@ -54,9 +54,38 @@ Future<void> showAccountSheet(BuildContext context, WidgetRef ref) {
               ),
               icon: const Icon(Icons.logout),
               label: const Text('Sign out'),
-              onPressed: () {
+              onPressed: () async {
+                final waiting = ref.read(outboxCountProvider).value ?? 0;
                 Navigator.of(sheetContext).pop();
-                signOut(ref);
+                if (waiting > 0) {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (d) => AlertDialog(
+                      backgroundColor: AppColors.surface,
+                      title: Text(
+                        '$waiting ${waiting == 1 ? 'item has' : 'items have'} not synced yet',
+                      ),
+                      content: const Text(
+                        'They stay on this phone and send after the next sign-in, once there is a connection.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(d).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(d).pop(true),
+                          child: const Text(
+                            'Sign out',
+                            style: TextStyle(color: AppColors.danger),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (ok != true) return;
+                }
+                await signOut(ref);
               },
             ),
           ],
