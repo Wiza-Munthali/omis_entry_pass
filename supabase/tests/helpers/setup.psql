@@ -228,3 +228,26 @@ as $$
   select n from tests.counts where tbl = p_tbl;
 $$;
 grant execute on function tests.snapshot_counts(), tests.total(text) to anon, authenticated;
+
+-- QR token of a fixture pass (guards cannot read passes, so look it up as owner).
+create function tests.qr(p_key text)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select qr_token from public.passes where id = tests.id(p_key);
+$$;
+
+-- The given keys of a JSON response, for compact assertions.
+create function tests.pick(p_body jsonb, p_keys text[])
+returns jsonb
+language sql
+immutable
+as $$
+  select coalesce(jsonb_object_agg(k, p_body -> k), '{}'::jsonb)
+  from unnest(p_keys) k
+  where p_body ? k;
+$$;
+grant execute on function tests.qr(text), tests.pick(jsonb, text[]) to anon, authenticated;
