@@ -61,9 +61,9 @@ void main() {
 
     // Guard tabs: Home · Scan · On site · New visitor.
     for (final label in ['Home', 'Scan', 'On site', 'New visitor']) {
-      expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+      expect(find.byKey(Key('nav-$label')), findsOneWidget, reason: label);
     }
-    expect(find.bySemanticsLabel('Approvals'), findsNothing);
+    expect(find.byKey(const Key('nav-Approvals')), findsNothing);
   });
 
   testWidgets('the gate is remembered: next sign-in goes straight home', (
@@ -89,7 +89,7 @@ void main() {
       InMemorySettings(const Gate(id: 'g-main', name: 'Main gate')),
     );
     for (final label in ['Home', 'Scan', 'Approvals', 'On site', 'More']) {
-      expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+      expect(find.byKey(Key('nav-$label')), findsOneWidget, reason: label);
     }
   });
 
@@ -130,11 +130,11 @@ void main() {
       InMemorySettings(const Gate(id: 'g-main', name: 'Main gate')),
     );
 
-    await tester.tap(find.bySemanticsLabel('On site'));
+    await tester.tap(find.byKey(const Key('nav-On site')));
     await tester.pumpAndSettle();
     expect(find.text('Kondwani Mwale'), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Home'));
+    await tester.tap(find.byKey(const Key('nav-Home')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Account'));
     await tester.pumpAndSettle();

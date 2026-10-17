@@ -51,7 +51,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Scan pass'), findsOneWidget);
 
-        await tester.tap(find.bySemanticsLabel('On site'));
+        await tester.tap(find.byKey(const Key('nav-On site')));
         await tester.pumpAndSettle();
         expect(find.text('Jane Mpinganjira-Chirwa'), findsOneWidget);
         // Any RenderFlex overflow is reported as a test exception.

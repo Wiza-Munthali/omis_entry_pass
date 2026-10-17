@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +7,12 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:omis_gate/core/providers.dart';
 import 'package:omis_gate/core/theme/app_theme.dart';
+import 'package:omis_gate/data/approvals_repository.dart';
 import 'package:omis_gate/data/auth_repository.dart';
 import 'package:omis_gate/data/gate_repository.dart';
+import 'package:omis_gate/data/gate_requests_repository.dart';
 import 'package:omis_gate/data/models.dart';
+import 'package:omis_gate/data/request_models.dart';
 import 'package:omis_gate/data/settings_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -124,15 +128,125 @@ class InMemorySettings implements SettingsRepository {
   Future<void> clearSelectedGate() async => gate = null;
 }
 
+class FakeApprovalsRepository implements ApprovalsRepository {
+  FakeApprovalsRepository({
+    List<RequestSummary>? pending,
+    RequestDetail? detail,
+  }) : pending = pending ?? [],
+       detailValue = detail;
+
+  List<RequestSummary> pending;
+  RequestDetail? detailValue;
+  final decisions = <({String passId, bool approve, String? reason})>[];
+  Decision? nextDecision;
+  final _changes = StreamController<void>.broadcast();
+
+  void emitChange() => _changes.add(null);
+
+  @override
+  Future<List<RequestSummary>> requests(RequestTab tab) async =>
+      tab == RequestTab.pending ? List.of(pending) : [];
+
+  @override
+  Future<int> pendingCount() async => pending.length;
+
+  @override
+  Stream<void> changes() => _changes.stream;
+
+  @override
+  Future<RequestDetail> detail(String passId) async => detailValue!;
+
+  @override
+  Future<String?> photoUrl(String storagePath) async => null;
+
+  @override
+  Future<Decision> decide(
+    String passId, {
+    required bool approve,
+    String? reason,
+  }) async {
+    decisions.add((passId: passId, approve: approve, reason: reason));
+    pending = pending.where((p) => p.passId != passId).toList();
+    return nextDecision ??
+        Decision(
+          alreadyDecided: false,
+          status: approve ? RequestStatus.approved : RequestStatus.rejected,
+        );
+  }
+
+  @override
+  Future<List<ActivityItem>> recentActivity() async => const [];
+}
+
+class FakeGateRequestsRepository implements GateRequestsRepository {
+  final created = <NewVisitor>[];
+  final photos = <String, int>{};
+  List<GateRequest> requests = [];
+  List<VisitorPassMatch> matches = [];
+  final checkedIn = <String>[];
+  final _status = StreamController<RequestStatus>.broadcast();
+
+  void emitStatus(RequestStatus s) => _status.add(s);
+
+  @override
+  Future<CreatedRequest> create(NewVisitor v) async {
+    created.add(v);
+    final id = 'req-${created.length}';
+    requests = [
+      GateRequest(
+        passId: id,
+        statusToken: 'tok-$id',
+        status: RequestStatus.pending,
+        fullName: v.fullName,
+        passType: v.passType,
+        hostName: v.hostName,
+        requestedAt: DateTime.now(),
+      ),
+      ...requests,
+    ];
+    return CreatedRequest(passId: id, statusToken: 'tok-$id');
+  }
+
+  @override
+  Future<void> uploadIdPhoto(String passId, Uint8List jpeg) async =>
+      photos[passId] = jpeg.lengthInBytes;
+
+  @override
+  Future<List<GateRequest>> mine() async => List.of(requests);
+
+  @override
+  Stream<RequestStatus> statusChanges(String statusToken) => _status.stream;
+
+  @override
+  Future<List<VisitorPassMatch>> findVisitors(String query) async => matches;
+
+  @override
+  Future<ScanResult> checkIn(String passId, String gateId) async {
+    checkedIn.add(passId);
+    return const ScanResult(
+      outcome: ScanOutcome.entryRecorded,
+      fullName: 'Visitor',
+    );
+  }
+}
+
 /// Provider overrides wiring the fakes in.
 List<Override> fakeOverrides({
   required FakeAuthRepository auth,
   required FakeGateRepository gates,
   required InMemorySettings settings,
+  FakeApprovalsRepository? approvals,
+  FakeGateRequestsRepository? requests,
 }) => [
   authRepositoryProvider.overrideWithValue(auth),
   gateRepositoryProvider.overrideWithValue(gates),
   settingsRepositoryProvider.overrideWithValue(settings),
+  approvalsRepositoryProvider.overrideWithValue(
+    approvals ?? FakeApprovalsRepository(),
+  ),
+  gateRequestsRepositoryProvider.overrideWithValue(
+    requests ?? FakeGateRequestsRepository(),
+  ),
 ];
 
 /// A single screen inside the app theme, with fakes.
