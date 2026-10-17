@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omis_gate/core/event_id.dart';
 import 'package:omis_gate/data/gate_repository.dart';
 import 'package:omis_gate/data/models.dart';
 import 'package:omis_gate/features/scan/scan_result_sheet.dart';
@@ -19,8 +20,11 @@ void main() {
       repo = FakeGateRepository();
       now = DateTime(2026, 10, 17, 8);
       session = ScanSession(
-        repository: repo,
-        gateId: 'g-main',
+        record: (code) => repo.recordScan(
+          qrToken: code,
+          gateId: 'g-main',
+          eventId: newEventId(),
+        ),
         clock: () => now,
       );
     });

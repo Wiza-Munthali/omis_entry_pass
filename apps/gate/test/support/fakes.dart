@@ -2,15 +2,19 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:omis_gate/core/connectivity.dart';
 import 'package:omis_gate/core/providers.dart';
 import 'package:omis_gate/core/theme/app_theme.dart';
 import 'package:omis_gate/data/approvals_repository.dart';
 import 'package:omis_gate/data/auth_repository.dart';
 import 'package:omis_gate/data/gate_repository.dart';
 import 'package:omis_gate/data/gate_requests_repository.dart';
+import 'package:omis_gate/data/local_db.dart';
 import 'package:omis_gate/data/models.dart';
 import 'package:omis_gate/data/request_models.dart';
 import 'package:omis_gate/data/settings_repository.dart';
@@ -100,6 +104,27 @@ class FakeGateRepository implements GateRepository {
   @override
   Future<List<OnSiteVisit>> onSite() async => List.of(visits);
 
+  final offlineScans = <({String tokenHash, String eventId})>[];
+  OfflineCacheData cache = OfflineCacheData(
+    generatedAt: DateTime.utc(2026),
+    passes: const [],
+    openVisits: const [],
+  );
+
+  @override
+  Future<OfflineCacheData> offlineCache() async => cache;
+
+  @override
+  Future<ScanResult> recordOfflineScan({
+    required String tokenHash,
+    required String gateId,
+    required DateTime scannedAt,
+    required String eventId,
+  }) async {
+    offlineScans.add((tokenHash: tokenHash, eventId: eventId));
+    return const ScanResult(outcome: ScanOutcome.entryRecorded);
+  }
+
   final pushTokens = <String, String?>{};
 
   @override
@@ -188,8 +213,11 @@ class FakeGateRequestsRepository implements GateRequestsRepository {
 
   void emitStatus(RequestStatus s) => _status.add(s);
 
+  final requestIds = <String?>[];
+
   @override
-  Future<CreatedRequest> create(NewVisitor v) async {
+  Future<CreatedRequest> create(NewVisitor v, {String? clientRequestId}) async {
+    requestIds.add(clientRequestId);
     created.add(v);
     final id = 'req-${created.length}';
     requests = [
@@ -230,6 +258,27 @@ class FakeGateRequestsRepository implements GateRequestsRepository {
   }
 }
 
+/// Switchable network state ("airplane mode") for tests.
+class FakeConnectivity implements ConnectivityService {
+  FakeConnectivity({bool online = true})
+    : _online = online; // ignore: prefer_initializing_formals
+
+  bool _online;
+  final _changes = StreamController<bool>.broadcast();
+
+  bool get online => _online;
+  set online(bool value) {
+    _online = value;
+    _changes.add(value);
+  }
+
+  @override
+  Future<bool> isOnline() async => _online;
+
+  @override
+  Stream<bool> onlineChanges() => _changes.stream;
+}
+
 /// Provider overrides wiring the fakes in.
 List<Override> fakeOverrides({
   required FakeAuthRepository auth,
@@ -237,7 +286,22 @@ List<Override> fakeOverrides({
   required InMemorySettings settings,
   FakeApprovalsRepository? approvals,
   FakeGateRequestsRepository? requests,
+  FakeConnectivity? connectivity,
+  LocalDb? db,
+  bool liveOutbox = false,
 }) => [
+  // drift's live queries close on a timer after their last listener leaves, which
+  // widget tests report as pending; tests not about offline get fixed counts.
+  if (!liveOutbox) ...[
+    outboxCountProvider.overrideWith((ref) => Stream.value(0)),
+    outboxFailedProvider.overrideWith((ref) => Stream.value(0)),
+  ],
+  localDbProvider.overrideWith((ref) {
+    final local = db ?? LocalDb(NativeDatabase.memory());
+    ref.onDispose(local.close);
+    return local;
+  }),
+  connectivityProvider.overrideWithValue(connectivity ?? FakeConnectivity()),
   authRepositoryProvider.overrideWithValue(auth),
   gateRepositoryProvider.overrideWithValue(gates),
   settingsRepositoryProvider.overrideWithValue(settings),
@@ -260,3 +324,9 @@ Widget themed(Widget child, {List<Override> overrides = const []}) =>
     );
 
 void disableFontFetching() => GoogleFonts.config.allowRuntimeFetching = false;
+
+/// Unmounts the app and lets drift close its live queries, so no timer is left pending.
+Future<void> unmountAndFlush(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump(const Duration(seconds: 1));
+}
