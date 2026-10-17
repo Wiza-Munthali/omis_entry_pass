@@ -87,6 +87,14 @@ export default async function Settings() {
               max={365}
               defaultValue={s.id_photo_retention_days}
             />
+            <TextField
+              label="Privacy contact"
+              name="privacy_contact"
+              maxLength={200}
+              placeholder="privacy@ghii.org or the HR office"
+              hint="Shown on the privacy notice. Empty: people are told to ask at reception."
+              defaultValue={s.privacy_contact ?? ""}
+            />
           </Panel>
         </div>
       </ActionForm>

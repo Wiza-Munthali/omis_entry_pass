@@ -42,6 +42,12 @@ export default function WelcomePage() {
           View it <ArrowRight className="size-4" aria-hidden />
         </Link>
       </p>
+
+      <p className="mt-auto pt-10 text-center text-label text-text-muted">
+        <Link href="/privacy" className="hover:underline">
+          Privacy notice
+        </Link>
+      </p>
     </>
   );
 }

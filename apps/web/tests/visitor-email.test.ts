@@ -70,3 +70,24 @@ describe("rejection email", () => {
     expect(email.html).not.toContain("cid:");
   });
 });
+
+describe("privacy notice link", () => {
+  it("points pass and rejection emails at the portal's /privacy", () => {
+    const pass = renderPassEmail({
+      fullName: "Chisomo Gondwe",
+      passType: "day",
+      validFrom: from,
+      validUntil: "2026-10-18T22:00:00Z",
+      passUrl: "https://entry.example/r/abc",
+    });
+    const rejected = renderRejectionEmail({
+      fullName: "Chisomo Gondwe",
+      reason: "No",
+      statusUrl: "https://entry.example/r/xyz",
+    });
+    for (const email of [pass, rejected]) {
+      expect(email.html).toContain('href="https://entry.example/privacy"');
+      expect(email.text).toContain("https://entry.example/privacy");
+    }
+  });
+});

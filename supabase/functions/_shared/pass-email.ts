@@ -136,6 +136,19 @@ function button(label: string, href: string): string {
             </tr>`;
 }
 
+/** The privacy notice lives next to the pass and status pages on the portal. */
+function privacyUrl(portalLink: string): string {
+  return `${new URL(portalLink).origin}/privacy`;
+}
+
+function privacyFooter(portalLink: string): string {
+  return `            <tr>
+              <td align="center" style="padding:0 32px 28px;">
+                <p style="margin:0;font-size:12px;line-height:16px;color:${colors.textMuted};">How we use your details: <a href="${escapeHtml(privacyUrl(portalLink))}" style="color:${colors.textMuted};">privacy notice</a></p>
+              </td>
+            </tr>`;
+}
+
 /** Staff pass issued / visitor pass approved: QR, validity, plate, gate instructions. */
 export function renderPassEmail(input: PassEmailInput) {
   const type = TYPE_LABEL[input.passType];
@@ -170,6 +183,7 @@ export function renderPassEmail(input: PassEmailInput) {
       details(rows),
       paragraph(instructions),
       button("Open my pass", input.passUrl),
+      privacyFooter(input.passUrl),
     ].join("\n"),
   );
 
@@ -181,6 +195,8 @@ export function renderPassEmail(input: PassEmailInput) {
     "",
     instructions,
     `Open your pass: ${input.passUrl}`,
+    "",
+    `How we use your details: ${privacyUrl(input.passUrl)}`,
   ].join("\n");
 
   return { subject, html, text };
@@ -198,6 +214,7 @@ export function renderRejectionEmail(input: RejectionEmailInput) {
       details([["Reason", escapeHtml(input.reason)]]),
       paragraph("If you think this is a mistake, contact the person you are visiting or ask the guard at the gate."),
       button("View request", input.statusUrl),
+      privacyFooter(input.statusUrl),
     ].join("\n"),
   );
   const text = [
@@ -207,6 +224,8 @@ export function renderRejectionEmail(input: RejectionEmailInput) {
     "",
     "If you think this is a mistake, contact the person you are visiting or ask the guard at the gate.",
     `View request: ${input.statusUrl}`,
+    "",
+    `How we use your details: ${privacyUrl(input.statusUrl)}`,
   ].join("\n");
   return { subject, html, text };
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ScreenHeader } from "@/components/portal/screen-header";
@@ -32,6 +33,11 @@ export default async function StaffEmailPage() {
         We&apos;ll email you a 6-digit code. No password needed.
       </p>
       <EmailForm domains={domains} />
+      <p className="mt-auto pt-10 text-center text-label text-text-muted">
+        <Link href="/privacy" className="hover:underline">
+          How we use your details
+        </Link>
+      </p>
     </>
   );
 }

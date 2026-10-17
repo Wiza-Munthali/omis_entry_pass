@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, CalendarDays, Car, LoaderCircle } from "lucide-react";
@@ -356,7 +357,15 @@ export function RequestForm({ today }: { today: string }) {
               />
               <span>
                 I agree that GHII may use these details to manage my visit and
-                keep a record of when I enter and leave.
+                keep a record of when I enter and leave, as described in the{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  className="font-medium text-brand-strong underline"
+                >
+                  privacy notice
+                </Link>
+                .
               </span>
             </Label>
             {errors.consent && (

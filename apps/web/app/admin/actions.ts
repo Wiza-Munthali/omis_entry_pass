@@ -334,6 +334,11 @@ const settingsSchema = z.object({
   approval_timeout_minutes: z.coerce.number().int().min(1).max(240),
   auto_close_time: z.string().regex(/^\d{2}:\d{2}$/, { message: "Use HH:MM." }),
   id_photo_retention_days: z.coerce.number().int().min(1).max(365),
+  privacy_contact: z
+    .string()
+    .trim()
+    .max(200)
+    .transform((v) => v || null),
 });
 
 export async function saveSettings(
