@@ -285,7 +285,7 @@ export async function setGateActive(
   return ok(
     active
       ? "Gate opened."
-      : "Gate closed. Phones posted there will be asked to choose another.",
+      : "Gate closed. Scans there are refused until it is opened again.",
   );
 }
 

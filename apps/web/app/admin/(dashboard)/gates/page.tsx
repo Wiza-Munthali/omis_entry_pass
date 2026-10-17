@@ -53,7 +53,7 @@ export default async function Gates() {
                   g.is_active
                     ? {
                         title: `Close ${g.name}?`,
-                        body: "Scans there stop until it is opened again. Guards posted there will be asked to choose another gate.",
+                        body: "Scans there are refused until it is opened again; a guard posted there is told to choose another gate.",
                         action: "Close gate",
                       }
                     : undefined
