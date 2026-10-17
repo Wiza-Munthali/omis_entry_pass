@@ -13,7 +13,7 @@
 create extension if not exists pgtap with schema extensions;
 
 create schema tests;
-grant usage on schema tests to anon, authenticated;
+grant usage on schema tests to anon, authenticated, service_role;
 
 create table tests.ids (key text primary key, id uuid not null);
 
@@ -76,7 +76,7 @@ begin
 end;
 $$;
 
-grant execute on all functions in schema tests to anon, authenticated;
+grant execute on all functions in schema tests to anon, authenticated, service_role;
 
 -- Standard fixtures:
 --   users     admin, admin2, receptionist, receptionist2, guard, guard2, staff, other_staff,
@@ -202,7 +202,7 @@ $$;
 -- Row counts as seen by postgres (no RLS), so "reads all" checks hold whether or
 -- not the dev seed is loaded. Call after build_world().
 create table tests.counts (tbl text primary key, n int not null);
-grant select on tests.counts to anon, authenticated;
+grant select on tests.counts to anon, authenticated, service_role;
 
 create function tests.snapshot_counts()
 returns void
@@ -229,7 +229,7 @@ set search_path = ''
 as $$
   select n from tests.counts where tbl = p_tbl;
 $$;
-grant execute on function tests.snapshot_counts(), tests.total(text) to anon, authenticated;
+grant execute on function tests.snapshot_counts(), tests.total(text) to anon, authenticated, service_role;
 
 -- QR token of a fixture pass (guards cannot read passes, so look it up as owner).
 create function tests.qr(p_key text)
@@ -252,4 +252,4 @@ as $$
   from unnest(p_keys) k
   where p_body ? k;
 $$;
-grant execute on function tests.qr(text), tests.pick(jsonb, text[]) to anon, authenticated;
+grant execute on function tests.qr(text), tests.pick(jsonb, text[]) to anon, authenticated, service_role;
