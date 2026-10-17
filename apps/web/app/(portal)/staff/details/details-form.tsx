@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Car } from "lucide-react";
 import { Field } from "@/components/portal/field";
 import { Notice } from "@/components/portal/notice";
@@ -26,6 +26,12 @@ export function DetailsForm({
   const [state, action] = useActionState<FormState, FormData>(saveDetails, {});
   const values = { ...defaults, ...state.values };
   const [drives, setDrives] = useState(Boolean(values.drives));
+
+  // React resets the form after each action and Radix's Switch follows that reset
+  // back to its initial value; restore what was submitted.
+  useEffect(() => {
+    if (state.values) setDrives(Boolean(state.values.drives));
+  }, [state]);
 
   return (
     <form action={action} className="mt-8 grid gap-6" noValidate>
@@ -57,12 +63,9 @@ export function DetailsForm({
           </span>
           I drive to work
         </Label>
-        <Switch
-          id="drives"
-          name="drives"
-          checked={drives}
-          onCheckedChange={setDrives}
-        />
+        {/* Submitted through our own field: Radix's hidden checkbox can fall out of sync after a form reset. */}
+        <input type="hidden" name="drives" value={drives ? "on" : "off"} />
+        <Switch id="drives" checked={drives} onCheckedChange={setDrives} />
       </div>
 
       {drives && (
