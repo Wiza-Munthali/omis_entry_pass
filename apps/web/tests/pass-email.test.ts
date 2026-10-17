@@ -29,7 +29,7 @@ describe("pass email", () => {
     expect(email.html).toContain('href="https://entry.example/pass"');
   });
   it("has a plain-text fallback with the same facts", () => {
-    expect(email.text).toContain("Valid until 17 Oct 2027");
+    expect(email.text).toContain("Valid until: 17 Oct 2027");
     expect(email.text).toContain("https://entry.example/pass");
   });
   it("is 600 px wide", () => {
