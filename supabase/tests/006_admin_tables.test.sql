@@ -33,9 +33,9 @@ select throws_ok('select * from public.gates', '42501', null, 'anon cannot read 
 reset role;
 
 select tests.authenticate_as('admin');
-select lives_ok($$insert into public.gates (name) values ('North gate')$$, 'admin adds a gate');
-select lives_ok($$update public.gates set is_active = false where name = 'North gate'$$, 'admin deactivates a gate');
-select lives_ok($$delete from public.gates where name = 'North gate'$$, 'admin deletes an unused gate');
+select lives_ok($$insert into public.gates (name) values ('Test-only gate')$$, 'admin adds a gate');
+select lives_ok($$update public.gates set is_active = false where name = 'Test-only gate'$$, 'admin deactivates a gate');
+select lives_ok($$delete from public.gates where name = 'Test-only gate'$$, 'admin deletes an unused gate');
 reset role;
 
 -- ---------------------------------------------------------------------------

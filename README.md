@@ -102,6 +102,37 @@ If a pass changed while the phone was offline (for example it was revoked), the 
 recorded and an `offline_conflict` flag is raised for admins. Codes that are not in the offline copy
 cannot be checked until the connection is back.
 
+## Admin dashboard
+
+Open http://localhost:3000/admin and sign in as `admin@ghii.test` with the code from Mailpit.
+Only admins get in; everyone else is sent back to sign-in.
+
+| Page | What it is for |
+| --- | --- |
+| Overview | Who is on site now (with check-out), today's entries per hour, what needs attention |
+| Visits | Search the log by name, ID or plate; filter by gate, pass type and dates; **Export CSV** |
+| Requests | Pending, escalated and decided requests; approve, or reject with a reason |
+| Passes | Show the QR, resend the email, extend, or revoke with a reason (the holder is emailed) |
+| Users | Invite guards, receptionists and admins; change roles; deactivate |
+| Gates | Today's entries per gate; add, close or reopen a gate |
+| Flags | Revoked or expired passes scanned, offline conflicts, auto-closed visits; resolve |
+| Settings | Organisation, staff email domains, pass lengths, approval timeout, auto-close time, photo retention |
+
+The CSV export takes the current filters, holds up to 50,000 rows, and guards against
+spreadsheet formulas in names and plates.
+
+### Scheduled jobs (pg_cron)
+
+| Job | When | What it does |
+| --- | --- | --- |
+| `escalate-approvals` | every minute | Escalates requests left waiting past the approval timeout |
+| `auto-close-visits` | every 5 minutes | Closes visits still open at the auto-close time and flags them |
+| `expire-passes` | every 15 minutes | Marks approved passes past their end as expired |
+| `cleanup-id-photos` | daily 02:00 CAT | Deletes ID photos past retention (calls the `cleanup-id-photos` function, so `npm run functions` must be running) |
+| `purge-old-requests` | Sundays 03:00 CAT | Removes contact and visit details from requests older than 90 days |
+
+To see them: `select jobname, schedule from cron.job;` and recent runs in `cron.job_run_details`.
+
 ## Day to day
 
 | Task | Command |

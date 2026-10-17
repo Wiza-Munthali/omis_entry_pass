@@ -324,11 +324,9 @@ const settingsSchema = z.object({
     ])
     .pipe(
       z.array(
-        z
-          .string()
-          .regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/, {
-            message: "Domains look like ghii.org (no @).",
-          }),
+        z.string().regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/, {
+          message: "Domains look like ghii.org (no @).",
+        }),
       ),
     ),
   staff_pass_days: z.coerce.number().int().min(1).max(730),
