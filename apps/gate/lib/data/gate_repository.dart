@@ -23,6 +23,9 @@ abstract class GateRepository {
   });
   Future<List<OnSiteVisit>> onSite();
   Future<ScanResult> checkOut(String visitId, {String? eventId});
+
+  /// Saves (or clears, with null) this phone's push token on the operator's profile.
+  Future<void> setPushToken(String userId, String? token);
 }
 
 class SupabaseGateRepository implements GateRepository {
@@ -116,4 +119,10 @@ class SupabaseGateRepository implements GateRepository {
         );
         return ScanResult.fromJson(Map<String, dynamic>.from(json as Map));
       });
+
+  @override
+  Future<void> setPushToken(String userId, String? token) => _call(
+    () =>
+        _client.from('profiles').update({'fcm_token': token}).eq('id', userId),
+  );
 }

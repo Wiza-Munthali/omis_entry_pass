@@ -123,9 +123,14 @@ class ScanResult {
     this.exitAt,
     this.duration,
     this.replayed = false,
+    this.passId,
   });
 
   final ScanOutcome outcome;
+
+  /// The pass that was scanned (absent for unknown codes). Approvers use it to
+  /// open a pending request straight from the scan (scan-and-approve).
+  final String? passId;
   final String? fullName;
   final PassType? passType;
   final String? plate;
@@ -152,6 +157,7 @@ class ScanResult {
           ? null
           : Duration(seconds: (j['duration_seconds'] as num).toInt()),
       replayed: j['replayed'] == true,
+      passId: j['pass_id'] as String?,
     );
   }
 }

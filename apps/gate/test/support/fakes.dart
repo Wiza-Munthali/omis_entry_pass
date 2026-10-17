@@ -96,6 +96,12 @@ class FakeGateRepository implements GateRepository {
   @override
   Future<List<OnSiteVisit>> onSite() async => List.of(visits);
 
+  final pushTokens = <String, String?>{};
+
+  @override
+  Future<void> setPushToken(String userId, String? token) async =>
+      pushTokens[userId] = token;
+
   @override
   Future<ScanResult> checkOut(String visitId, {String? eventId}) async {
     checkedOut.add(visitId);
