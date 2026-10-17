@@ -20,7 +20,8 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level error",
-    "functions": "supabase functions serve --env-file supabase/functions/.env"
+    "functions": "supabase functions serve --env-file supabase/functions/.env",
+    "load:scan": "node scripts/load-test/scan.mjs"
   },
   "devDependencies": {
     "supabase": "^2.121.0"
