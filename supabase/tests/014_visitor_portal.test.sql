@@ -2,7 +2,7 @@
 -- get_request_status (public by secret token), and the decision triggers.
 begin;
 \ir helpers/setup.psql
-select plan(41);
+select plan(42);
 
 select tests.build_world();
 
@@ -97,18 +97,20 @@ select is((select contact_email from public.passes where id = tests.id('req2')),
           'this request''s email kept on the request');
 
 -- ---------------------------------------------------------------------------
--- Rate limiting: 5 per hour per phone and per IP
+-- Rate limiting: 5 per hour per phone, 30 per hour per IP
 -- ---------------------------------------------------------------------------
 set local role service_role;
 -- Same phone, different networks. req1 already used +265991000001 once.
 select pg_temp.submit(p_ip => '10.0.1.' || n, p_id => 'rl-phone-' || n) from generate_series(1, 4) n;
 select throws_ok($$select pg_temp.submit(p_ip => '10.0.2.1', p_id => 'rl-phone-x')$$, 'P0001', 'rate_limited',
                  'sixth request from one phone in an hour is refused');
--- Same network, different phones.
+-- Same network, different phones: shared networks (mobile NAT, guest Wi-Fi) get 30.
 select pg_temp.submit(p_ip => '192.168.5.5', p_phone => '0992000' || lpad(n::text, 3, '0'), p_id => 'rl-ip-' || n)
-from generate_series(1, 5) n;
+from generate_series(1, 29) n;
+select lives_ok($$select pg_temp.submit(p_ip => '192.168.5.5', p_phone => '0992000999', p_id => 'rl-ip-30')$$,
+                'thirtieth request from one IP in an hour is accepted');
 select throws_ok($$select pg_temp.submit(p_ip => '192.168.5.5', p_phone => '0993000000', p_id => 'rl-ip-x')$$,
-                 'P0001', 'rate_limited', 'sixth request from one IP in an hour is refused');
+                 'P0001', 'rate_limited', 'thirty-first request from one IP in an hour is refused');
 select lives_ok($$select pg_temp.submit(p_ip => '192.168.5.6', p_phone => '0993000000', p_id => 'rl-ok')$$,
                 'other phones on other networks are unaffected');
 reset role;

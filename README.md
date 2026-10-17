@@ -64,8 +64,9 @@ select vault.create_secret('<long random value>', 'internal_hook_secret');
 
 Without them, decisions still work; only the email is skipped (with a warning in the database log).
 
-Requests are limited to 5 per hour per phone and per IP. Locally every request shares one IP, so
-clear the counter when testing:
+Requests are limited to 5 per hour per phone and 30 per hour per IP (mobile networks and guest
+Wi-Fi put many visitors behind one IP). Locally every request shares one IP, so clear the counter
+when testing a lot:
 
 ```bash
 docker exec supabase_db_omis-entry psql -U postgres -c "truncate private.request_attempts"
