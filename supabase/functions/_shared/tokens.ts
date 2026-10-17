@@ -12,4 +12,6 @@ export const colors = {
   surface: "#FFFFFF",
   surface2: "#F5F5F2",
   border: "#E4E4E0",
+  danger: "#C0392B",
+  dangerSoft: "#FBE3E0",
 } as const;

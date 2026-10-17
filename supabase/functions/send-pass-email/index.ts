@@ -5,13 +5,11 @@
 // The pass is read through RLS as that user, so nobody can email themselves another
 // person's pass. Visitor pass emails (Phase 4) will add a service-role path.
 import { createClient } from "@supabase/supabase-js";
-import QRCode from "qrcode";
+import { json } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
 import { QR_CONTENT_ID, renderPassEmail } from "../_shared/pass-email.ts";
-import { colors } from "../_shared/tokens.ts";
+import { qrPngBase64 } from "../_shared/qr.ts";
 
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
@@ -47,13 +45,6 @@ Deno.serve(async (req) => {
   const vehicle = pass.vehicles as unknown as { plate: string } | null;
   const portalUrl = Deno.env.get("PORTAL_URL") ?? "http://localhost:3000";
 
-  const qrDataUrl = await QRCode.toDataURL(pass.qr_token, {
-    errorCorrectionLevel: "M",
-    margin: 2,
-    width: 560,
-    color: { dark: colors.ink, light: colors.surface },
-  });
-
   const email = renderPassEmail({
     fullName: person.full_name,
     passType: pass.type,
@@ -71,7 +62,7 @@ Deno.serve(async (req) => {
           filename: "omis-entry-pass.png",
           contentId: QR_CONTENT_ID,
           contentType: "image/png",
-          base64: qrDataUrl.slice(qrDataUrl.indexOf(",") + 1),
+          base64: await qrPngBase64(pass.qr_token),
         },
       ],
     });
