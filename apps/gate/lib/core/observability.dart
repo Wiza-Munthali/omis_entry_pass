@@ -27,7 +27,6 @@ Future<void> runReported(void Function() runApp) async {
       ..enableAutoPerformanceTracing = false
       ..enableUserInteractionBreadcrumbs = false
       ..attachScreenshot = false
-      ..attachViewHierarchy = false
       ..beforeSend = ((event, hint) => scrubEvent(event))
       ..beforeBreadcrumb = ((crumb, hint) => scrubBreadcrumb(crumb));
   }, appRunner: runApp);
