@@ -1,0 +1,2 @@
+-- Local development seed, applied by `supabase db reset`.
+-- Phase 1 adds: 1 admin, 1 receptionist, 1 guard, 2 gates, sample passes.
