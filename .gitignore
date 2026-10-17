@@ -21,3 +21,6 @@ supabase/.temp
 
 # Local QR sheet from scripts/seed-qr.mjs
 seed-qr.html
+
+# Database backups (scripts/backup)
+backups/

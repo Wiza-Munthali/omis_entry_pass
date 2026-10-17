@@ -21,7 +21,9 @@
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level error",
     "functions": "supabase functions serve --env-file supabase/functions/.env",
-    "load:scan": "node scripts/load-test/scan.mjs"
+    "load:scan": "node scripts/load-test/scan.mjs",
+    "db:backup": "scripts/backup/backup.sh",
+    "db:restore-drill": "scripts/backup/restore-drill.sh"
   },
   "devDependencies": {
     "supabase": "^2.121.0"
