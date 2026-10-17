@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
 
 const TONES = {

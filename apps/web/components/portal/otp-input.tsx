@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 const LENGTH = 6;
 

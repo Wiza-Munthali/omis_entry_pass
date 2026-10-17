@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 // Status and tag chips (pill). Status tones use the spec's foreground-on-soft pairs.
 const chipVariants = cva(

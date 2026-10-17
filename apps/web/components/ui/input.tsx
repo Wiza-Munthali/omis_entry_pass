@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 // Pill input on a white surface, 56 px tall to match buttons.
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {

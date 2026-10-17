@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, IdCard, UserPlus } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import { Brand } from "@/components/portal/brand";
 
 // P1 Welcome
