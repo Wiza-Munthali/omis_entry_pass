@@ -19,7 +19,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:lint": "supabase db lint --level error"
+    "db:lint": "supabase db lint --level error",
+    "functions": "supabase functions serve --env-file supabase/functions/.env"
   },
   "devDependencies": {
     "supabase": "^2.121.0"
