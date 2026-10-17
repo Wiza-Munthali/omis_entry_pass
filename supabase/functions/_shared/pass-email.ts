@@ -272,3 +272,46 @@ export function renderApprovalRequestEmail(input: ApprovalRequestEmailInput) {
   ].join("\n");
   return { subject, html, text };
 }
+
+/** A pass was revoked by an admin. */
+export function renderRevokedEmail(input: { fullName: string; passType: PassType }) {
+  const subject = `Your OMIS Entry pass has been cancelled, ${input.fullName}`;
+  const what = input.passType === "staff" ? "staff pass" : "visitor pass";
+  const html = layout(
+    subject,
+    [
+      header(escapeHtml(input.fullName), chip("Cancelled", colors.danger, colors.dangerSoft)),
+      paragraph(`Your ${what} can no longer be used at the gate.`),
+      paragraph("If you think this is a mistake, please contact reception.") +
+        "\n            <tr><td style=\"height:16px\"></td></tr>",
+    ].join("\n"),
+  );
+  const text = [subject, `Your ${what} can no longer be used at the gate.`, "If you think this is a mistake, please contact reception."].join("\n");
+  return { subject, html, text };
+}
+
+const ROLE_LABEL = { admin: "an admin", receptionist: "a receptionist", guard: "a guard" } as const;
+
+/** An admin added an operator account. */
+export function renderOperatorInviteEmail(input: { fullName?: string | null; role: keyof typeof ROLE_LABEL; orgName: string }) {
+  const subject = `You've been added to OMIS Entry`;
+  const greeting = input.fullName ? escapeHtml(input.fullName) : "Welcome";
+  const html = layout(
+    subject,
+    [
+      header(greeting, chip(input.role[0].toUpperCase() + input.role.slice(1), colors.ink, colors.surface2)),
+      paragraph(`${escapeHtml(input.orgName)} has added you to OMIS Entry as ${ROLE_LABEL[input.role]}.`),
+      paragraph(
+        input.role === "admin"
+          ? "Sign in to the admin dashboard, or the OMIS Entry gate app, with this email address. You'll get a 6-digit code; no password is needed."
+          : "Open the OMIS Entry gate app and sign in with this email address. You'll get a 6-digit code; no password is needed.",
+      ) + "\n            <tr><td style=\"height:16px\"></td></tr>",
+    ].join("\n"),
+  );
+  const text = [
+    subject,
+    `${input.orgName} has added you to OMIS Entry as ${ROLE_LABEL[input.role]}.`,
+    "Sign in with this email address; you'll get a 6-digit code.",
+  ].join("\n");
+  return { subject, html, text };
+}

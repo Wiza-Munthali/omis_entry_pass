@@ -1,12 +1,14 @@
-// notify-visitor — emails a web visitor the decision on their request: the pass with
-// its QR when approved, the reason when rejected (docs/SPEC.md → Notifications).
+// notify-visitor — emails a pass holder about their pass (docs/SPEC.md → Notifications):
+//   approved  → the pass with its QR (web visitors)
+//   rejected  → the reason (web visitors)
+//   revoked   → that it can no longer be used (staff and visitors)
 //
-// Called only by the database (passes_notify_visitor trigger via pg_net) with the
-// shared secret from Vault in x-internal-secret. Reads with the service role.
+// Called only by the database (passes_notify_visitor / passes_notify_revoked triggers
+// via pg_net) with the shared secret from Vault in x-internal-secret.
 import { createClient } from "@supabase/supabase-js";
 import { json, safeEqual } from "../_shared/http.ts";
 import { sendEmail } from "../_shared/mailer.ts";
-import { QR_CONTENT_ID, renderPassEmail, renderRejectionEmail } from "../_shared/pass-email.ts";
+import { QR_CONTENT_ID, renderPassEmail, renderRejectionEmail, renderRevokedEmail } from "../_shared/pass-email.ts";
 import { qrPngBase64 } from "../_shared/qr.ts";
 
 Deno.serve(async (req) => {
@@ -25,15 +27,17 @@ Deno.serve(async (req) => {
   const { data: pass, error } = await supabase
     .from("passes")
     .select(
-      "id, type, status, qr_token, status_token, valid_from, valid_until, host_name, reject_reason, contact_email, people(full_name), vehicles(plate)",
+      "id, type, status, qr_token, status_token, valid_from, valid_until, host_name, reject_reason, contact_email, people(full_name, email), vehicles(plate)",
     )
     .eq("id", passId)
     .maybeSingle();
 
   if (error) return json(500, { error: "lookup_failed" });
-  if (!pass || !pass.contact_email) return json(404, { error: "no_recipient" });
+  const person = pass?.people as unknown as { full_name: string; email: string | null } | undefined;
+  const to = pass?.contact_email ?? person?.email;
+  if (!pass || !person || !to) return json(404, { error: "no_recipient" });
 
-  const fullName = (pass.people as unknown as { full_name: string }).full_name;
+  const fullName = person.full_name;
   const plate = (pass.vehicles as unknown as { plate: string } | null)?.plate;
   const statusUrl = `${(Deno.env.get("PORTAL_URL") ?? "http://localhost:3000").replace(/\/$/, "")}/r/${pass.status_token}`;
 
@@ -49,7 +53,7 @@ Deno.serve(async (req) => {
         passUrl: statusUrl,
       });
       await sendEmail({
-        to: pass.contact_email,
+        to,
         ...email,
         inline: [
           {
@@ -62,7 +66,7 @@ Deno.serve(async (req) => {
       });
     } else if (pass.status === "rejected") {
       await sendEmail({
-        to: pass.contact_email,
+        to,
         ...renderRejectionEmail({
           fullName,
           reason: pass.reject_reason ?? "No reason given",
@@ -70,6 +74,8 @@ Deno.serve(async (req) => {
           statusUrl,
         }),
       });
+    } else if (pass.status === "revoked") {
+      await sendEmail({ to, ...renderRevokedEmail({ fullName, passType: pass.type }) });
     } else {
       return json(409, { error: "not_decided", status: pass.status });
     }

@@ -436,3 +436,7 @@ verify_jwt = false
 # Called only by the database (pg_net); authenticated with x-internal-secret.
 [functions.notify-approvers]
 verify_jwt = false
+
+# Called only by the database (pg_net); authenticated with x-internal-secret.
+[functions.cleanup-id-photos]
+verify_jwt = false
