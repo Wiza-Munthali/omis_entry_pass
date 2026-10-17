@@ -72,12 +72,31 @@ when testing a lot:
 docker exec supabase_db_omis-entry psql -U postgres -c "truncate private.request_attempts"
 ```
 
+### Approvals, escalation and push
+
+Every new visitor request (web or gate) calls `notify-approvers`, which emails and pushes to active
+receptionists. A `pg_cron` job runs every minute: requests still pending after
+`settings.approval_timeout_minutes` (default 5) are escalated once, with a flag, to all admins.
+To try escalation quickly, lower the timeout in Studio (`settings` table) to 1.
+
+Push is off until Firebase is configured; everything else, including the emails, works without it.
+To turn it on (Android; iPhone push additionally needs a paid Apple developer account and an APNs key
+uploaded to Firebase):
+
+1. Create a Firebase project and add an **Android app** with package name `mw.ghii.omis_gate`.
+2. From **Project settings → General**, copy the project ID, the Android app ID, the API key and the
+   sender ID (Cloud Messaging tab) into `apps/gate/env/dev.json` (`FIREBASE_*`; see `dev.example.json`).
+3. From **Project settings → Service accounts → Generate new private key**, put the whole JSON on one
+   line in `supabase/functions/.env` as `FCM_SERVICE_ACCOUNT_JSON='{...}'`, then restart
+   `npm run functions`.
+4. Rebuild the gate app and sign in as a receptionist; allow notifications when asked.
+
 ## Day to day
 
 | Task | Command |
 | --- | --- |
 | Web dev server (http://localhost:3000) | `npm run dev` |
-| Edge Functions (pass emails, visitor requests) | `npm run functions` |
+| Edge Functions (emails, visitor requests, approvals, push) | `npm run functions` |
 | Read emails (codes, passes) | http://127.0.0.1:54324 |
 | Gate app | `cd apps/gate && flutter run --dart-define-from-file=env/dev.json` |
 | Reset DB (migrations + seed) | `npm run db:reset` |
