@@ -30,6 +30,20 @@ cp supabase/functions/.env.example supabase/functions/.env
 Fill the URL and publishable key into `apps/web/.env.local` and `apps/gate/env/dev.json`.
 The Android emulator reaches the host as `10.0.2.2`; on a real phone use your Mac's LAN IP.
 
+## Local accounts (seed)
+
+`npm run db:reset` loads [supabase/seed.sql](supabase/seed.sql). Sign in with an email code; codes arrive in Mailpit at http://127.0.0.1:54324.
+
+| Email | Role |
+| --- | --- |
+| admin@ghii.test | admin |
+| reception@ghii.test | receptionist |
+| guard@ghii.test | guard |
+| chikondi@ghii.test | staff (approved pass) |
+| grace@ghii.test | staff (revoked pass) |
+
+The seed also has two gates and visitor passes that are pending, approved (on site), rejected and expired.
+
 ## Day to day
 
 | Task | Command |
