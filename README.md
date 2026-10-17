@@ -91,6 +91,17 @@ uploaded to Firebase):
    `npm run functions`.
 4. Rebuild the gate app and sign in as a receptionist; allow notifications when asked.
 
+### Offline scanning
+
+The gate app keeps an offline copy of approved passes: SHA-256 fingerprints of the QR tokens, never
+the tokens, plus who is on site. The copy refreshes at start, every 5 minutes and after each sync.
+Without a network, scans are decided from that copy and queued; so are visitors registered at the
+gate, photos included. A banner shows **Offline — N scans waiting to sync**. When the connection
+returns, the queue is sent in order. Every item carries its event id, so retries never duplicate.
+If a pass changed while the phone was offline (for example it was revoked), the visit is still
+recorded and an `offline_conflict` flag is raised for admins. Codes that are not in the offline copy
+cannot be checked until the connection is back.
+
 ## Day to day
 
 | Task | Command |
