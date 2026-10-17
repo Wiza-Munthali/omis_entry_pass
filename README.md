@@ -133,6 +133,16 @@ spreadsheet formulas in names and plates.
 
 To see them: `select jobname, schedule from cron.job;` and recent runs in `cron.job_run_details`.
 
+## Going live
+
+[docs/GO-LIVE.md](docs/GO-LIVE.md) is the checklist for production. It covers:
+- **Sentry error tracking.** Errors only, scrubbed of personal data; nothing is sent
+  until a DSN is set.
+- **Backups and a restore drill.**
+- **The `record_scan` load test.**
+- **The privacy notice** at `/privacy`.
+- **The field test** on the cheapest gate phone.
+
 ## Day to day
 
 | Task | Command |
@@ -146,6 +156,8 @@ To see them: `select jobname, schedule from cron.job;` and recent runs in `cron.
 | Web lint / typecheck / tests | `npm run lint`, `npm run typecheck`, `npm test` |
 | Web formatting | `npm run format` |
 | Gate lint / tests | `cd apps/gate && flutter analyze && flutter test` |
+| Load test `record_scan` (p95 under 300 ms) | `npm run load:scan -- --seed`, then `-- --cleanup` |
+| Back up the database / restore drill | `npm run db:backup`, `npm run db:restore-drill -- backups/<time>` |
 
 ## Rules
 
