@@ -2,6 +2,9 @@
 
 QR gate passes for staff and visitors. The full build spec is in [docs/SPEC.md](docs/SPEC.md).
 
+**New here, or not technical?** Start with [docs/GUIDE.md](docs/GUIDE.md): running it, putting it
+online, and using it day to day, step by step.
+
 ```
 apps/web/     Next.js 15: public portal + /admin dashboard
 apps/gate/    Flutter gate app (Android first, iOS supported)
